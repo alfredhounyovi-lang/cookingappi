@@ -1,9 +1,79 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Cooking App</title>
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 </head>
-<body>
+
+<body style="font-family: Arial; text-align: center; margin-top: 50px;">
+
   <h1>Bienvenue sur Cooking App 🍳</h1>
+  <p>Teste un paiement Pi pour valider l’application</p>
+
+  <button onclick="pay()" style="padding: 15px; font-size: 16px;">
+    Payer avec Pi
+  </button>
+
+  <p id="status"></p>
+
+  <script>
+    // Initialisation SDK Pi
+    Pi.init({ version: "2.0" });
+
+    // Authentification utilisateur
+    async function authenticate() {
+      try {
+        const scopes = ['payments'];
+        const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
+        document.getElementById("status").innerText = "Connecté : " + auth.user.username;
+        return auth;
+      } catch (error) {
+        console.error(error);
+        document.getElementById("status").innerText = "Erreur connexion";
+      }
+    }
+
+    // Fonction paiement
+    async function pay() {
+      try {
+        await authenticate();
+
+        const paymentData = {
+          amount: 0.01,
+          memo: "Test Cooking App",
+          metadata: { orderId: "001" }
+        };
+
+        await Pi.createPayment(paymentData, {
+          onReadyForServerApproval: function(paymentId) {
+            console.log("Paiement prêt :", paymentId);
+          },
+          onReadyForServerCompletion: function(paymentId, txid) {
+            console.log("Transaction en cours :", txid);
+            document.getElementById("status").innerText = "Paiement réussi ✅";
+          },
+          onCancel: function(paymentId) {
+            document.getElementById("status").innerText = "Paiement annulé ❌";
+          },
+          onError: function(error, payment) {
+            console.error(error);
+            document.getElementById("status").innerText = "Erreur paiement ❌";
+          }
+        });
+
+        document.getElementById("status").innerText = "Paiement en cours...";
+      } catch (error) {
+        console.error(error);
+        document.getElementById("status").innerText = "Erreur générale ❌";
+      }
+    }
+
+    // Gestion paiement incomplet
+    function onIncompletePaymentFound(payment) {
+      console.log("Paiement incomplet :", payment);
+    }
+  </script>
+
 </body>
 </html>
