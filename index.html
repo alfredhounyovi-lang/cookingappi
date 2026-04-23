@@ -18,26 +18,24 @@
   <p id="status"></p>
 
   <script>
-    // Initialisation SDK Pi
     Pi.init({ version: "2.0" });
 
-    // Authentification utilisateur
+    let currentUser = null;
+
     async function authenticate() {
       try {
-        const scopes = ['payments'];
-        const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
-        document.getElementById("status").innerText = "Connecté : " + auth.user.username;
-        return auth;
+        currentUser = await Pi.authenticate(['payments'], onIncompletePaymentFound);
+        document.getElementById("status").innerText =
+          "Connecté : " + currentUser.user.username;
       } catch (error) {
-        console.error(error);
-        document.getElementById("status").innerText = "Erreur connexion";
+        document.getElementById("status").innerText = "Erreur connexion ❌";
+        throw error;
       }
     }
 
-    // Fonction paiement
     async function pay() {
       try {
-        await authenticate();
+        if (!currentUser) await authenticate();
 
         const paymentData = {
           amount: 0.01,
@@ -46,32 +44,41 @@
         };
 
         await Pi.createPayment(paymentData, {
-          onReadyForServerApproval: function(paymentId) {
-            console.log("Paiement prêt :", paymentId);
+          onReadyForServerApproval: async function(paymentId) {
+            await fetch("/api/approve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId })
+            });
           },
-          onReadyForServerCompletion: function(paymentId, txid) {
-            console.log("Transaction en cours :", txid);
+
+          onReadyForServerCompletion: async function(paymentId, txid) {
+            await fetch("/api/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, txid })
+            });
+
             document.getElementById("status").innerText = "Paiement réussi ✅";
           },
-          onCancel: function(paymentId) {
+
+          onCancel: function() {
             document.getElementById("status").innerText = "Paiement annulé ❌";
           },
-          onError: function(error, payment) {
+
+          onError: function(error) {
             console.error(error);
             document.getElementById("status").innerText = "Erreur paiement ❌";
           }
         });
 
-        document.getElementById("status").innerText = "Paiement en cours...";
       } catch (error) {
-        console.error(error);
         document.getElementById("status").innerText = "Erreur générale ❌";
       }
     }
 
-    // Gestion paiement incomplet
     function onIncompletePaymentFound(payment) {
-      console.log("Paiement incomplet :", payment);
+      console.log(payment);
     }
   </script>
 
