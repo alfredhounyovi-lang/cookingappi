@@ -1,50 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Cooking App</title>
+  <meta charset="UTF-8" />
+  <title>Cooking App - Pi Payment</title>
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 </head>
 
-<body style="font-family: Arial; text-align: center; margin-top: 50px;">
+<body>
+  <h1>🍳 Cooking App</h1>
 
-  <h1>Bienvenue sur Cooking App 🍳</h1>
-  <p>Teste un paiement Pi pour valider l’application</p>
-
-  <button onclick="pay()" style="padding: 15px; font-size: 16px;">
-    Payer avec Pi
-  </button>
-
-  <p id="status"></p>
+  <button onclick="payWithPi()">Payer avec Pi</button>
 
   <script>
+    // IMPORTANT: init Pi SDK
+    const Pi = window.Pi;
+
     Pi.init({ version: "2.0" });
 
-    let currentUser = null;
+    async function payWithPi() {
 
-    async function authenticate() {
+      const paymentData = {
+        amount: 1,
+        memo: "Cooking App Order",
+        metadata: { product: "food" }
+      };
+
       try {
-        currentUser = await Pi.authenticate(['payments'], onIncompletePaymentFound);
-        document.getElementById("status").innerText = "Connecté ✅";
-      } catch (error) {
-        document.getElementById("status").innerText = "Erreur connexion ❌";
-        throw error;
-      }
-    }
-
-    async function pay() {
-      try {
-        if (!currentUser) await authenticate();
-
-        const paymentData = {
-          amount: 0.01,
-          memo: "Test Cooking App",
-          metadata: { orderId: "001" }
-        };
-
         await Pi.createPayment(paymentData, {
 
-          onReadyForServerApproval: async function(paymentId) {
+          // STEP 1: APPROVAL
+          onReadyForServerApproval: async (paymentId) => {
+            console.log("APPROVE:", paymentId);
+
             await fetch("/api/approve", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -52,37 +39,31 @@
             });
           },
 
-          onReadyForServerCompletion: async function(paymentId, txid) {
+          // STEP 2: COMPLETION
+          onReadyForServerCompletion: async (paymentId, txid) => {
+            console.log("COMPLETE:", paymentId, txid);
+
             await fetch("/api/complete", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ paymentId, txid })
             });
-
-            document.getElementById("status").innerText = "Paiement réussi ✅";
           },
 
-          onCancel: function() {
-            document.getElementById("status").innerText = "Paiement annulé ❌";
+          onCancel: (paymentId) => {
+            console.log("Payment cancelled:", paymentId);
           },
 
-          onError: function(error) {
-            console.error(error);
-            document.getElementById("status").innerText = "Erreur paiement ❌";
+          onError: (error) => {
+            console.error("Payment error:", error);
           }
 
         });
 
-      } catch (error) {
-        console.error(error);
-        document.getElementById("status").innerText = "Erreur générale ❌";
+      } catch (err) {
+        console.error("Pi payment failed:", err);
       }
     }
-
-    function onIncompletePaymentFound(payment) {
-      console.log("Incomplete payment:", payment);
-    }
   </script>
-
 </body>
 </html>
