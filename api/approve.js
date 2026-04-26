@@ -6,15 +6,20 @@ export default async function handler(req, res) {
 
     const { paymentId } = req.body;
 
-    console.log("Approve:", paymentId);
-
-    // Réponse immédiate (très important)
-    return res.status(200).json({
-      result: "success"
+    const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/approve`, {
+      method: "POST",
+      headers: {
+        "Authorization": "Key TA_CLE_API_ICI"
+      }
     });
+
+    const data = await response.json();
+    console.log("Approve response:", data);
+
+    return res.status(200).json(data);
 
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "fail" });
   }
 }
