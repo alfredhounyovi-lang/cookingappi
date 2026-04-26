@@ -2,14 +2,13 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>🍳 Cooking App - Pi Payment</title>
+  <title>🍳 Cooking App - Pi Mainnet</title>
 
-  <!-- Pi SDK -->
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: Arial;
       text-align: center;
       padding: 40px;
     }
@@ -22,17 +21,9 @@
     }
 
     #status {
-      margin-top: 25px;
+      margin-top: 20px;
       font-weight: bold;
       white-space: pre-line;
-    }
-
-    .box {
-      margin-top: 20px;
-      padding: 10px;
-      border: 1px solid #ddd;
-      display: inline-block;
-      min-width: 280px;
     }
   </style>
 </head>
@@ -41,10 +32,9 @@
 
   <h1>🍳 Cooking App</h1>
 
-  <div class="box">
-    <button onclick="payWithPi()">Payer avec Pi</button>
-    <div id="status">Status: initialisation...</div>
-  </div>
+  <button onclick="startPayment()">Payer avec Pi</button>
+
+  <div id="status">Initialisation...</div>
 
   <script>
     const statusDiv = document.getElementById("status");
@@ -55,53 +45,85 @@
     }
 
     // =========================
-    // 1. PI SDK CHECK
+    // SAFE PI INIT (IMPORTANT)
     // =========================
-    const Pi = window.Pi;
+    let Pi = null;
 
-    function isPiReady() {
-      return window.Pi && window.Pi.createPayment;
-    }
-
-    if (!isPiReady()) {
-      setStatus("❌ Pi SDK non détecté\nOuvre dans Pi Browser");
-    } else {
-      Pi.init({ version: "2.0" });
-      setStatus("✔️ Pi SDK détecté");
-    }
-
-    // =========================
-    // 2. WAIT SAFE (ANTI BUG)
-    // =========================
-    function waitForPi(callback) {
-      const interval = setInterval(() => {
-        if (isPiReady()) {
-          clearInterval(interval);
-          callback();
+    function initPiSafe() {
+      try {
+        if (window.Pi) {
+          Pi = window.Pi;
+          Pi.init({ version: "2.0" });
+          setStatus("✔️ Pi SDK initialisé");
+        } else {
+          setStatus("❌ Pi SDK non disponible");
         }
-      }, 200);
+      } catch (e) {
+        console.error(e);
+        setStatus("❌ Erreur init Pi SDK");
+      }
+    }
 
-      // timeout sécurité
-      setTimeout(() => {
-        clearInterval(interval);
-        setStatus("❌ Pi SDK timeout (non chargé)");
-      }, 5000);
+    // retry init (Pi Browser charge parfois après DOM)
+    let initAttempts = 0;
+    const initInterval = setInterval(() => {
+      initAttempts++;
+
+      if (window.Pi && window.Pi.createPayment) {
+        initPiSafe();
+        clearInterval(initInterval);
+      }
+
+      if (initAttempts > 10) {
+        clearInterval(initInterval);
+        setStatus("❌ Pi SDK non détecté (ouvre dans Pi Browser)");
+      }
+    }, 500);
+
+    // =========================
+    // WAIT SAFE
+    // =========================
+    function waitForPiReady() {
+      return new Promise((resolve, reject) => {
+        let tries = 0;
+
+        const t = setInterval(() => {
+          tries++;
+
+          if (window.Pi && window.Pi.createPayment) {
+            clearInterval(t);
+            resolve(true);
+          }
+
+          if (tries > 10) {
+            clearInterval(t);
+            reject("Pi SDK timeout");
+          }
+        }, 300);
+      });
     }
 
     // =========================
-    // 3. PAYMENT FLOW
+    // PAYMENT FUNCTION
     // =========================
-    async function payWithPi() {
+    async function startPayment() {
 
       setStatus("🔄 Vérification Pi SDK...");
 
-      if (!isPiReady()) {
-        setStatus("❌ Pi SDK indisponible\n➡️ Ouvre dans Pi Browser");
-        alert("Cette app doit être ouverte dans Pi Browser");
+      try {
+        await waitForPiReady();
+      } catch (e) {
+        setStatus("❌ Pi SDK non prêt");
+        alert("Pi SDK non disponible. Ouvre dans Pi Browser.");
         return;
       }
 
-      setStatus("✔️ SDK OK - préparation paiement...");
+      if (!window.Pi || !window.Pi.createPayment) {
+        setStatus("❌ Pi SDK invalide");
+        return;
+      }
+
+      setStatus("✔️ SDK OK - lancement paiement...");
 
       const paymentData = {
         amount: 1,
@@ -111,85 +133,60 @@
 
       try {
 
-        await Pi.createPayment(paymentData, {
+        await window.Pi.createPayment(paymentData, {
 
-          // =====================
-          // APPROVAL STEP
-          // =====================
+          // APPROVE
           onReadyForServerApproval: async (paymentId) => {
-            setStatus("⏳ Approval en cours...");
+            setStatus("⏳ Approval...");
 
             try {
-              const res = await fetch("/api/approve", {
+              await fetch("/api/approve", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ paymentId })
               });
 
-              const data = await res.json();
-              console.log("APPROVE:", data);
+              setStatus("✔️ Approval envoyé");
 
-              if (!res.ok) {
-                setStatus("❌ Erreur approval serveur");
-              } else {
-                setStatus("✔️ Approval OK");
-              }
-
-            } catch (err) {
-              console.error(err);
-              setStatus("❌ Erreur réseau approval");
+            } catch (e) {
+              console.error(e);
+              setStatus("❌ Erreur approval");
             }
           },
 
-          // =====================
-          // COMPLETION STEP
-          // =====================
+          // COMPLETE
           onReadyForServerCompletion: async (paymentId, txid) => {
-            setStatus("⏳ Completion en cours...");
+            setStatus("⏳ Completion...");
 
             try {
-              const res = await fetch("/api/complete", {
+              await fetch("/api/complete", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ paymentId, txid })
               });
 
-              const data = await res.json();
-              console.log("COMPLETE:", data);
+              setStatus("🎉 Paiement terminé");
 
-              if (!res.ok) {
-                setStatus("❌ Erreur completion serveur");
-              } else {
-                setStatus("🎉 Paiement réussi !");
-              }
-
-            } catch (err) {
-              console.error(err);
-              setStatus("❌ Erreur réseau completion");
+            } catch (e) {
+              console.error(e);
+              setStatus("❌ Erreur completion");
             }
           },
 
-          // =====================
-          // CANCEL
-          // =====================
-          onCancel: (paymentId) => {
-            console.log("CANCEL:", paymentId);
+          onCancel: () => {
             setStatus("⚠️ Paiement annulé");
           },
 
-          // =====================
-          // ERROR
-          // =====================
-          onError: (error) => {
-            console.error("PAYMENT ERROR:", error);
-            setStatus("❌ Erreur paiement Pi");
+          onError: (err) => {
+            console.error(err);
+            setStatus("❌ Erreur Pi payment");
           }
 
         });
 
       } catch (err) {
-        console.error("CRITICAL ERROR:", err);
-        setStatus("❌ createPayment a échoué\nVoir console");
+        console.error(err);
+        setStatus("❌ createPayment FAILED\nVoir console");
       }
     }
   </script>
