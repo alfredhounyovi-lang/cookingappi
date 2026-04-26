@@ -182,5 +182,39 @@
 
   </script>
 
+  <!-- Garde tout ton code actuel au-dessus -->
+<hr style="margin-top: 50px;">
+<h3>🧪 Section Testnet (10 transactions requises)</h3>
+<p>Entrez l'adresse Testnet d'un ami pour lui envoyer 0.1 Pi de test</p>
+<input type="text" id="friend-wallet" placeholder="Adresse G..." style="width: 80%; padding: 10px;">
+<button onclick="sendTestReward()">Envoyer Récompense Testnet</button>
+
+<script>
+// Ajoute cette fonction à la fin de ton <script> actuel
+async function sendTestReward() {
+  const addr = document.getElementById("friend-wallet").value;
+  if(!addr) return alert("Veuillez entrer une adresse de portefeuille !");
+  
+  setStatus("🔄 Envoi de la récompense Testnet...");
+  
+  try {
+    const res = await fetch("/api/testnet-reward", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userWalletAddress: addr })
+    });
+    
+    if (res.ok) {
+        log("✔️ Récompense envoyée avec succès à " + addr);
+        alert("Transaction réussie !");
+    } else {
+        log("❌ Erreur lors de l'envoi de la récompense");
+    }
+  } catch (e) {
+    log("❌ Erreur réseau Testnet");
+  }
+}
+</script>
+
 </body>
 </html>
