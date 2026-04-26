@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>🍳 Cooking App - Pi Mainnet</title>
+  <title>🍳 Cooking App - Pi Payment</title>
 
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
@@ -16,14 +16,15 @@
     button {
       padding: 14px 22px;
       font-size: 18px;
-      cursor: pointer;
       margin-top: 20px;
     }
 
     #status {
       margin-top: 20px;
-      font-weight: bold;
       white-space: pre-line;
+      font-weight: bold;
+      border: 1px solid #ddd;
+      padding: 10px;
     }
   </style>
 </head>
@@ -37,158 +38,122 @@
   <div id="status">Initialisation...</div>
 
   <script>
+
     const statusDiv = document.getElementById("status");
 
+    function log(msg) {
+      statusDiv.innerText += "\n" + msg;
+    }
+
     function setStatus(msg) {
-      console.log(msg);
-      statusDiv.innerText = "Status: " + msg;
+      statusDiv.innerText = msg;
     }
 
     // =========================
-    // SAFE PI INIT (IMPORTANT)
+    // INIT PI SDK SAFE
     // =========================
-    let Pi = null;
-
-    function initPiSafe() {
+    function initPi() {
       try {
         if (window.Pi) {
-          Pi = window.Pi;
-          Pi.init({ version: "2.0" });
-          setStatus("✔️ Pi SDK initialisé");
+          window.Pi.init({ version: "2.0" });
+          setStatus("✔️ Pi SDK détecté");
         } else {
-          setStatus("❌ Pi SDK non disponible");
+          setStatus("❌ Pi SDK introuvable (ouvre dans Pi Browser)");
         }
       } catch (e) {
-        console.error(e);
         setStatus("❌ Erreur init Pi SDK");
       }
     }
 
-    // retry init (Pi Browser charge parfois après DOM)
-    let initAttempts = 0;
-    const initInterval = setInterval(() => {
-      initAttempts++;
+    // attendre Pi
+    let tries = 0;
+    const interval = setInterval(() => {
+      tries++;
 
-      if (window.Pi && window.Pi.createPayment) {
-        initPiSafe();
-        clearInterval(initInterval);
+      if (window.Pi) {
+        initPi();
+        clearInterval(interval);
       }
 
-      if (initAttempts > 10) {
-        clearInterval(initInterval);
-        setStatus("❌ Pi SDK non détecté (ouvre dans Pi Browser)");
+      if (tries > 10) {
+        setStatus("❌ Pi SDK non chargé");
+        clearInterval(interval);
       }
+
     }, 500);
 
     // =========================
-    // WAIT SAFE
-    // =========================
-    function waitForPiReady() {
-      return new Promise((resolve, reject) => {
-        let tries = 0;
-
-        const t = setInterval(() => {
-          tries++;
-
-          if (window.Pi && window.Pi.createPayment) {
-            clearInterval(t);
-            resolve(true);
-          }
-
-          if (tries > 10) {
-            clearInterval(t);
-            reject("Pi SDK timeout");
-          }
-        }, 300);
-      });
-    }
-
-    // =========================
-    // PAYMENT FUNCTION
+    // PAYMENT
     // =========================
     async function startPayment() {
 
-      setStatus("🔄 Vérification Pi SDK...");
+      setStatus("🔄 DEBUG PI...");
 
-      try {
-        await waitForPiReady();
-      } catch (e) {
-        setStatus("❌ Pi SDK non prêt");
-        alert("Pi SDK non disponible. Ouvre dans Pi Browser.");
-        return;
-      }
+      // 🔥 DEBUG IMPORTANT (visible écran)
+      log("Pi type: " + typeof window.Pi);
+      log("createPayment type: " + typeof window.Pi?.createPayment);
 
       if (!window.Pi || !window.Pi.createPayment) {
-        setStatus("❌ Pi SDK invalide");
+        setStatus("❌ createPayment introuvable\nOuvre dans Pi Browser");
         return;
       }
 
       setStatus("✔️ SDK OK - lancement paiement...");
 
-      const paymentData = {
-        amount: 1,
-        memo: "Cooking App Order",
-        metadata: { product: "food" }
-      };
-
       try {
 
-        await window.Pi.createPayment(paymentData, {
+        window.Pi.createPayment(
+          {
+            amount: 1,
+            memo: "Cooking App Order",
+            metadata: { product: "food" }
+          },
+          {
 
-          // APPROVE
-          onReadyForServerApproval: async (paymentId) => {
-            setStatus("⏳ Approval...");
+            // APPROVAL
+            onReadyForServerApproval: async (paymentId) => {
+              log("APPROVE: " + paymentId);
 
-            try {
               await fetch("/api/approve", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ paymentId })
               });
 
-              setStatus("✔️ Approval envoyé");
+              log("✔️ approve envoyé");
+            },
 
-            } catch (e) {
-              console.error(e);
-              setStatus("❌ Erreur approval");
-            }
-          },
+            // COMPLETE
+            onReadyForServerCompletion: async (paymentId, txid) => {
+              log("COMPLETE: " + paymentId);
 
-          // COMPLETE
-          onReadyForServerCompletion: async (paymentId, txid) => {
-            setStatus("⏳ Completion...");
-
-            try {
               await fetch("/api/complete", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ paymentId, txid })
               });
 
-              setStatus("🎉 Paiement terminé");
+              log("🎉 paiement complété");
+            },
 
-            } catch (e) {
-              console.error(e);
-              setStatus("❌ Erreur completion");
+            onCancel: (paymentId) => {
+              setStatus("⚠️ paiement annulé");
+            },
+
+            onError: (err) => {
+              log("❌ ERROR: " + JSON.stringify(err));
+              setStatus("❌ erreur paiement Pi");
             }
-          },
 
-          onCancel: () => {
-            setStatus("⚠️ Paiement annulé");
-          },
-
-          onError: (err) => {
-            console.error(err);
-            setStatus("❌ Erreur Pi payment");
           }
+        );
 
-        });
-
-      } catch (err) {
-        console.error(err);
-        setStatus("❌ createPayment FAILED\nVoir console");
+      } catch (e) {
+        log("CRITICAL ERROR: " + e);
+        setStatus("❌ createPayment FAILED");
       }
     }
+
   </script>
 
 </body>
