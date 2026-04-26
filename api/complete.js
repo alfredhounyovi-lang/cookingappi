@@ -4,16 +4,22 @@ export default async function handler(req, res) {
       return res.status(405).send("Method Not Allowed");
     }
 
-    const { paymentId, txid } = req.body;
+    const { paymentId } = req.body;
 
-    console.log("Complete:", paymentId, txid);
-
-    return res.status(200).json({
-      result: "success"
+    const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/complete`, {
+      method: "POST",
+      headers: {
+        "Authorization": "Key TA_CLE_API_ICI"
+      }
     });
+
+    const data = await response.json();
+    console.log("Complete response:", data);
+
+    return res.status(200).json(data);
 
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "fail" });
   }
 }
