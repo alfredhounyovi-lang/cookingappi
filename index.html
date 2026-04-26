@@ -2,28 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Cooking App - Pi Payment</title>
+  <title>🍳 Cooking App - Pi Payment</title>
+
+  <!-- Pi SDK -->
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      padding: 40px;
+    }
+
+    button {
+      padding: 12px 20px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+      white-space: pre-line;
+    }
+  </style>
 </head>
 
 <body>
+
   <h1>🍳 Cooking App</h1>
 
-  <button onclick="testClick()">Test Click</button>
+  <button onclick="payWithPi()">Payer avec Pi</button>
 
-<script>
-  function testClick() {
-    console.log("BUTTON CLICKED");
-    alert("Button works!");
-  }
-</script>
+  <div id="status">Status: prêt</div>
+
   <script>
-    // IMPORTANT: init Pi SDK
+    const statusDiv = document.getElementById("status");
+
+    function setStatus(msg) {
+      console.log(msg);
+      statusDiv.innerText = "Status: " + msg;
+    }
+
+    // Init Pi safely
     const Pi = window.Pi;
 
-    Pi.init({ version: "2.0" });
+    if (Pi) {
+      Pi.init({ version: "2.0" });
+      setStatus("Pi SDK détecté ✔️");
+    } else {
+      setStatus("Pi SDK NON chargé ❌ (ouvre dans Pi Browser)");
+    }
 
     async function payWithPi() {
+      setStatus("Démarrage paiement...");
+
+      // CHECK 1: Pi SDK
+      if (!window.Pi) {
+        setStatus("Erreur: Pi SDK non disponible ❌");
+        alert("Ouvre cette app dans Pi Browser");
+        return;
+      }
 
       const paymentData = {
         amount: 1,
@@ -34,42 +73,52 @@
       try {
         await Pi.createPayment(paymentData, {
 
-          // STEP 1: APPROVAL
+          // STEP 1 - APPROVAL
           onReadyForServerApproval: async (paymentId) => {
-            console.log("APPROVE:", paymentId);
+            setStatus("Approval en cours...");
 
-            await fetch("/api/approve", {
+            const res = await fetch("/api/approve", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ paymentId })
             });
+
+            const data = await res.json();
+            console.log("APPROVE RESPONSE:", data);
           },
 
-          // STEP 2: COMPLETION
+          // STEP 2 - COMPLETION
           onReadyForServerCompletion: async (paymentId, txid) => {
-            console.log("COMPLETE:", paymentId, txid);
+            setStatus("Completion en cours...");
 
-            await fetch("/api/complete", {
+            const res = await fetch("/api/complete", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ paymentId, txid })
             });
+
+            const data = await res.json();
+            console.log("COMPLETE RESPONSE:", data);
           },
 
           onCancel: (paymentId) => {
-            console.log("Payment cancelled:", paymentId);
+            setStatus("Paiement annulé ❌");
+            console.log("CANCEL:", paymentId);
           },
 
           onError: (error) => {
-            console.error("Payment error:", error);
+            setStatus("Erreur paiement ❌");
+            console.error(error);
           }
 
         });
 
       } catch (err) {
-        console.error("Pi payment failed:", err);
+        setStatus("Erreur critique ❌ voir console");
+        console.error("PAYMENT ERROR:", err);
       }
     }
   </script>
+
 </body>
 </html>
