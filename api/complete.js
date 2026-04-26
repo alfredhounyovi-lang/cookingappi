@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/complete`, {
       method: "POST",
       headers: {
-        "Authorization": "Key TA_CLE_API_ICI"
+        "Authorization": "1gfftilc2c1hl2vi5fhhyfn3a84nkb5nm4slow6rgmnktyvrjaqjshy13qoqhban"
       }
     });
 
