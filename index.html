@@ -2,8 +2,9 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>🍳 Cooking App - Pi Payment</title>
+  <title>🍳 Cooking App - Pi</title>
 
+  <!-- Pi SDK -->
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
   <style>
@@ -41,31 +42,37 @@
 
     const statusDiv = document.getElementById("status");
 
-    function log(msg) {
-      statusDiv.innerText += "\n" + msg;
-    }
-
     function setStatus(msg) {
       statusDiv.innerText = msg;
+      console.log(msg);
+    }
+
+    function log(msg) {
+      statusDiv.innerText += "\n" + msg;
+      console.log(msg);
     }
 
     // =========================
-    // INIT PI SDK SAFE
+    // SAFE PI INIT
     // =========================
+    function isPiReady() {
+      return window.Pi && typeof window.Pi.createPayment === "function";
+    }
+
     function initPi() {
       try {
         if (window.Pi) {
           window.Pi.init({ version: "2.0" });
           setStatus("✔️ Pi SDK détecté");
         } else {
-          setStatus("❌ Pi SDK introuvable (ouvre dans Pi Browser)");
+          setStatus("❌ Pi SDK non détecté");
         }
       } catch (e) {
         setStatus("❌ Erreur init Pi SDK");
       }
     }
 
-    // attendre Pi
+    // retry init (important Pi Browser)
     let tries = 0;
     const interval = setInterval(() => {
       tries++;
@@ -76,29 +83,32 @@
       }
 
       if (tries > 10) {
-        setStatus("❌ Pi SDK non chargé");
+        setStatus("❌ Pi SDK introuvable (ouvre dans Pi Browser)");
         clearInterval(interval);
       }
-
     }, 500);
 
     // =========================
-    // PAYMENT
+    // PAYMENT FUNCTION
     // =========================
     async function startPayment() {
 
-      setStatus("🔄 DEBUG PI...");
+      setStatus("🔄 Vérification Pi SDK...");
 
-      // 🔥 DEBUG IMPORTANT (visible écran)
-      log("Pi type: " + typeof window.Pi);
-      log("createPayment type: " + typeof window.Pi?.createPayment);
+      // WAIT SAFE (IMPORTANT FIX PI BROWSER)
+      let attempts = 0;
+      while (!isPiReady() && attempts < 20) {
+        await new Promise(r => setTimeout(r, 300));
+        attempts++;
+      }
 
-      if (!window.Pi || !window.Pi.createPayment) {
-        setStatus("❌ createPayment introuvable\nOuvre dans Pi Browser");
+      // CHECK FINAL
+      if (!isPiReady()) {
+        setStatus("❌ createPayment indisponible\n➡️ Ouvre dans Pi Browser officiel");
         return;
       }
 
-      setStatus("✔️ SDK OK - lancement paiement...");
+      setStatus("✔️ Pi SDK OK - lancement paiement...");
 
       try {
 
@@ -110,47 +120,63 @@
           },
           {
 
+            // =====================
             // APPROVAL
+            // =====================
             onReadyForServerApproval: async (paymentId) => {
               log("APPROVE: " + paymentId);
 
-              await fetch("/api/approve", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ paymentId })
-              });
+              try {
+                const res = await fetch("/api/approve", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ paymentId })
+                });
 
-              log("✔️ approve envoyé");
+                if (res.ok) log("✔️ approve OK");
+                else log("❌ approve error");
+
+              } catch (e) {
+                log("❌ approve network error");
+              }
             },
 
-            // COMPLETE
+            // =====================
+            // COMPLETION
+            // =====================
             onReadyForServerCompletion: async (paymentId, txid) => {
               log("COMPLETE: " + paymentId);
 
-              await fetch("/api/complete", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ paymentId, txid })
-              });
+              try {
+                const res = await fetch("/api/complete", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ paymentId, txid })
+                });
 
-              log("🎉 paiement complété");
+                if (res.ok) log("🎉 complete OK");
+                else log("❌ complete error");
+
+              } catch (e) {
+                log("❌ complete network error");
+              }
             },
 
-            onCancel: (paymentId) => {
-              setStatus("⚠️ paiement annulé");
+            onCancel: () => {
+              setStatus("⚠️ Paiement annulé");
             },
 
             onError: (err) => {
               log("❌ ERROR: " + JSON.stringify(err));
-              setStatus("❌ erreur paiement Pi");
+              setStatus("❌ Pi payment error");
             }
 
           }
         );
 
       } catch (e) {
-        log("CRITICAL ERROR: " + e);
-        setStatus("❌ createPayment FAILED");
+        console.error(e);
+        setStatus("❌ createPayment FAILED\nVoir logs écran");
       }
     }
 
