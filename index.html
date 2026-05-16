@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8" />
+
   <title>🍳 Cooking App - Pi</title>
 
   <!-- Pi SDK -->
@@ -10,14 +12,14 @@
   <style>
     body {
       font-family: Arial;
-      text-align: center;
-      padding: 40px;
       max-width: 800px;
       margin: auto;
+      text-align: center;
+      padding: 40px;
     }
 
     button {
-      padding: 14px 22px;
+      padding: 14px 24px;
       font-size: 18px;
       margin-top: 20px;
       cursor: pointer;
@@ -31,381 +33,485 @@
     }
 
     #status {
-      margin-top: 20px;
-      white-space: pre-line;
-      font-weight: bold;
-      border: 1px solid #ddd;
-      padding: 15px;
-      border-radius: 8px;
-      min-height: 120px;
+      margin-top: 25px;
       text-align: left;
+      border: 1px solid #ccc;
+      padding: 15px;
+      min-height: 150px;
+      white-space: pre-line;
+      border-radius: 10px;
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
 
-<h1>🍳 Cooking App</h1>
+  <h1>🍳 Cooking App</h1>
 
-<button onclick="startPayment()">Payer avec Pi</button>
+  <button onclick="startPayment()">
+    Payer avec Pi
+  </button>
 
-<div id="status">Initialisation...</div>
+  <div id="status">
+    Initialisation...
+  </div>
 
-<hr style="margin-top:50px;">
+  <hr style="margin-top:50px;">
 
-<h3>🧪 Section Testnet (10 transactions requises)</h3>
+  <h3>
+    🧪 Section Testnet (10 transactions requises)
+  </h3>
 
-<p>
-Entrez l'adresse Testnet d'un ami pour lui envoyer 0.1 Pi de test
-</p>
+  <p>
+    Entrez l'adresse Testnet d'un ami
+  </p>
 
-<input
-  type="text"
-  id="friend-wallet"
-  placeholder="Adresse wallet Testnet G..."
-/>
+  <input
+    type="text"
+    id="friend-wallet"
+    placeholder="Adresse wallet Testnet G..."
+  />
 
-<br>
+  <br>
 
-<button onclick="sendTestReward()">
-  Envoyer Récompense Testnet
-</button>
+  <button onclick="sendTestReward()">
+    Envoyer Récompense Testnet
+  </button>
 
-<script>
+  <script>
 
-  // =========================
-  // GLOBALS
-  // =========================
+    // =========================
+    // GLOBALS
+    // =========================
 
-  const statusDiv = document.getElementById("status");
+    const statusDiv =
+      document.getElementById("status");
 
-  let currentUser = null;
+    let currentUser = null;
 
-  // =========================
-  // HELPERS
-  // =========================
+    // =========================
+    // HELPERS
+    // =========================
 
-  function setStatus(msg) {
-    statusDiv.innerText = msg;
-    console.log(msg);
-  }
+    function setStatus(msg) {
 
-  function log(msg) {
-    statusDiv.innerText += "\n" + msg;
-    console.log(msg);
-  }
+      statusDiv.innerText = msg;
 
-  function isPiReady() {
-    return window.Pi &&
-      typeof window.Pi.createPayment === "function";
-  }
+      console.log(msg);
+    }
 
-  // =========================
-  // INIT PI SDK
-  // =========================
+    function log(msg) {
 
-  async function initPi() {
+      statusDiv.innerText += "\n" + msg;
 
-    try {
+      console.log(msg);
+    }
 
-      if (!window.Pi) {
-        setStatus("❌ Pi SDK introuvable");
+    function isPiReady() {
+
+      return (
+        window.Pi &&
+        typeof window.Pi.createPayment === "function"
+      );
+    }
+
+    // =========================
+    // INIT PI SDK
+    // =========================
+
+    async function initPi() {
+
+      try {
+
+        if (!window.Pi) {
+
+          setStatus(
+            "❌ Pi SDK introuvable"
+          );
+
+          return;
+        }
+
+        // IMPORTANT
+        // false = MAINNET
+        // true = TESTNET
+        window.Pi.init({
+          version: "2.0",
+          sandbox: false
+        });
+
+        setStatus(
+          "🔄 Authentification Pi..."
+        );
+
+        const scopes = [
+          "payments",
+          "username"
+        ];
+
+        // IMPORTANT FIX
+        const auth =
+          await window.Pi.authenticate(
+            scopes,
+            function onIncompletePaymentFound(payment) {
+
+              console.log(
+                "Incomplete payment found:",
+                payment
+              );
+            }
+          );
+
+        currentUser = auth.user;
+
+        setStatus(
+          "✔️ Connecté à Pi\n" +
+          "Utilisateur: " +
+          currentUser.username
+        );
+
+        log(
+          "UID: " +
+          currentUser.uid
+        );
+
+      } catch (e) {
+
+        console.error(e);
+
+        setStatus(
+          "❌ Erreur Pi SDK\n\n" +
+          "➡️ Vérifie :\n" +
+          "- ouverture dans Pi Browser\n" +
+          "- app enregistrée Pi Developer Portal\n" +
+          "- domaine validé\n" +
+          "- Pi Browser connecté"
+        );
+      }
+    }
+
+    // =========================
+    // SAFE WAIT SDK
+    // =========================
+
+    let tries = 0;
+
+    const interval = setInterval(() => {
+
+      tries++;
+
+      if (window.Pi) {
+
+        clearInterval(interval);
+
+        initPi();
+      }
+
+      if (tries > 20) {
+
+        clearInterval(interval);
+
+        setStatus(
+          "❌ Pi SDK non détecté\n\n" +
+          "➡️ Ouvre l'app dans Pi Browser"
+        );
+      }
+
+    }, 500);
+
+    // =========================
+    // MAIN PAYMENT
+    // =========================
+
+    async function startPayment() {
+
+      if (!currentUser) {
+
+        alert(
+          "Utilisateur Pi non connecté"
+        );
+
         return;
       }
 
-      // SANDBOX TRUE IMPORTANT
-      window.Pi.init({
-        version: "2.0",
-        sandbox: true
-      });
-
-      setStatus("🔄 Authentification Pi...");
-
-      // LOGIN USER
-      const scopes = ['payments', 'username'];
-
-      const auth = await window.Pi.authenticate(scopes);
-
-      currentUser = auth.user;
-
       setStatus(
-        "✔️ Connecté à Pi\n" +
-        "Utilisateur: " + currentUser.username
+        "🔄 Lancement paiement Pi..."
       );
 
-      log("UID: " + currentUser.uid);
+      try {
 
-    } catch (e) {
-
-      console.error(e);
-
-      setStatus(
-        "❌ Erreur Pi SDK\n" +
-        "Ouvre l'application dans Pi Browser"
-      );
-    }
-  }
-
-  // =========================
-  // SAFE INIT
-  // =========================
-
-  let tries = 0;
-
-  const interval = setInterval(() => {
-
-    tries++;
-
-    if (window.Pi) {
-      clearInterval(interval);
-      initPi();
-    }
-
-    if (tries > 15) {
-
-      clearInterval(interval);
-
-      setStatus(
-        "❌ Pi SDK non détecté\n" +
-        "➡️ Ouvre dans Pi Browser officiel"
-      );
-    }
-
-  }, 500);
-
-  // =========================
-  // MAIN PAYMENT
-  // =========================
-
-  async function startPayment() {
-
-    if (!currentUser) {
-      setStatus("❌ Utilisateur Pi non connecté");
-      return;
-    }
-
-    setStatus("🔄 Lancement paiement Pi...");
-
-    try {
-
-      window.Pi.createPayment(
-        {
-          amount: 1,
-          memo: "Cooking App Order",
-          metadata: {
-            product: "food"
-          }
-        },
-        {
-
-          // =====================
-          // APPROVE
-          // =====================
-
-          onReadyForServerApproval:
-          async function(paymentId) {
-
-            log("APPROVE: " + paymentId);
-
-            try {
-
-              const res = await fetch("/api/approve", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                  paymentId
-                })
-              });
-
-              const data = await res.json();
-
-              console.log(data);
-
-              if (res.ok) {
-                log("✔️ approve OK");
-              } else {
-                log("❌ approve error");
-              }
-
-            } catch (e) {
-
-              console.error(e);
-
-              log("❌ approve network error");
+        window.Pi.createPayment(
+          {
+            amount: 1,
+            memo: "Cooking App Order",
+            metadata: {
+              product: "food"
             }
           },
 
-          // =====================
-          // COMPLETE
-          // =====================
+          {
 
-          onReadyForServerCompletion:
-          async function(paymentId, txid) {
+            // =====================
+            // APPROVE
+            // =====================
 
-            log("COMPLETE: " + paymentId);
+            onReadyForServerApproval:
+            async function(paymentId) {
 
-            try {
+              log(
+                "APPROVE: " +
+                paymentId
+              );
 
-              const res = await fetch("/api/complete", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                  paymentId,
-                  txid
-                })
-              });
+              try {
 
-              const data = await res.json();
+                const res =
+                  await fetch(
+                    "/api/approve",
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type":
+                        "application/json"
+                      },
+                      body: JSON.stringify({
+                        paymentId
+                      })
+                    }
+                  );
 
-              console.log(data);
+                const data =
+                  await res.json();
 
-              if (res.ok) {
-                log("🎉 Paiement terminé !");
-              } else {
-                log("❌ complete error");
+                console.log(data);
+
+                if (res.ok) {
+
+                  log(
+                    "✔️ approve OK"
+                  );
+
+                } else {
+
+                  log(
+                    "❌ approve failed"
+                  );
+                }
+
+              } catch (e) {
+
+                console.error(e);
+
+                log(
+                  "❌ approve network error"
+                );
               }
+            },
 
-            } catch (e) {
+            // =====================
+            // COMPLETE
+            // =====================
 
-              console.error(e);
+            onReadyForServerCompletion:
+            async function(paymentId, txid) {
 
-              log("❌ complete network error");
+              log(
+                "COMPLETE: " +
+                paymentId
+              );
+
+              try {
+
+                const res =
+                  await fetch(
+                    "/api/complete",
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type":
+                        "application/json"
+                      },
+                      body: JSON.stringify({
+                        paymentId,
+                        txid
+                      })
+                    }
+                  );
+
+                const data =
+                  await res.json();
+
+                console.log(data);
+
+                if (res.ok) {
+
+                  log(
+                    "🎉 Paiement terminé"
+                  );
+
+                } else {
+
+                  log(
+                    "❌ complete failed"
+                  );
+                }
+
+              } catch (e) {
+
+                console.error(e);
+
+                log(
+                  "❌ complete network error"
+                );
+              }
+            },
+
+            // =====================
+            // CANCEL
+            // =====================
+
+            onCancel: function() {
+
+              setStatus(
+                "⚠️ Paiement annulé"
+              );
+            },
+
+            // =====================
+            // ERROR
+            // =====================
+
+            onError: function(error) {
+
+              console.error(error);
+
+              log(
+                "❌ Payment Error"
+              );
+
+              setStatus(
+                "❌ Erreur paiement Pi\n\n" +
+                JSON.stringify(error)
+              );
             }
-          },
 
-          // =====================
-          // CANCEL
-          // =====================
-
-          onCancel: function() {
-
-            setStatus("⚠️ Paiement annulé");
-          },
-
-          // =====================
-          // ERROR
-          // =====================
-
-          onError: function(error) {
-
-            console.error(error);
-
-            log("❌ Payment Error");
-
-            setStatus(
-              "❌ Erreur paiement Pi\n" +
-              JSON.stringify(error)
-            );
           }
-
-        }
-      );
-
-    } catch (e) {
-
-      console.error(e);
-
-      setStatus(
-        "❌ createPayment FAILED"
-      );
-    }
-  }
-
-  // =========================
-  // TESTNET REWARD
-  // =========================
-
-  async function sendTestReward() {
-
-    const addr =
-      document.getElementById("friend-wallet")
-      .value
-      .trim();
-
-    if (!addr) {
-
-      alert(
-        "Veuillez entrer une adresse wallet"
-      );
-
-      return;
-    }
-
-    if (!currentUser) {
-
-      alert(
-        "Utilisateur Pi non connecté"
-      );
-
-      return;
-    }
-
-    setStatus(
-      "🔄 Envoi récompense Testnet..."
-    );
-
-    try {
-
-      const res = await fetch(
-        "/api/testnet-reward",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            userWalletAddress: addr,
-            uid: currentUser.uid
-          })
-        }
-      );
-
-      const data = await res.json();
-
-      console.log(data);
-
-      if (res.ok) {
-
-        log(
-          "✔️ Récompense envoyée"
         );
 
-        log(
-          "Wallet: " + addr
-        );
+      } catch (e) {
 
-        alert(
-          "Transaction Testnet réussie !"
-        );
+        console.error(e);
 
-      } else {
-
-        console.error(data);
-
-        log(
-          "❌ Échec transaction"
-        );
-
-        alert(
-          "Erreur transaction Testnet"
+        setStatus(
+          "❌ createPayment FAILED"
         );
       }
-
-    } catch (e) {
-
-      console.error(e);
-
-      log(
-        "❌ Erreur réseau"
-      );
     }
-  }
 
-</script>
+    // =========================
+    // TESTNET REWARD
+    // =========================
+
+    async function sendTestReward() {
+
+      const addr =
+        document
+        .getElementById(
+          "friend-wallet"
+        )
+        .value
+        .trim();
+
+      if (!addr) {
+
+        alert(
+          "Veuillez entrer une adresse wallet"
+        );
+
+        return;
+      }
+
+      if (!currentUser) {
+
+        alert(
+          "Utilisateur Pi non connecté"
+        );
+
+        return;
+      }
+
+      setStatus(
+        "🔄 Envoi récompense Testnet..."
+      );
+
+      try {
+
+        const res =
+          await fetch(
+            "/api/testnet-reward",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                "application/json"
+              },
+
+              body: JSON.stringify({
+
+                userWalletAddress:
+                  addr,
+
+                uid:
+                  currentUser.uid
+              })
+            }
+          );
+
+        const data =
+          await res.json();
+
+        console.log(data);
+
+        if (res.ok) {
+
+          log(
+            "✔️ Récompense envoyée"
+          );
+
+          log(
+            "Wallet: " + addr
+          );
+
+          alert(
+            "Transaction Testnet réussie !"
+          );
+
+        } else {
+
+          console.error(data);
+
+          log(
+            "❌ Échec transaction"
+          );
+
+          alert(
+            "Erreur transaction Testnet"
+          );
+        }
+
+      } catch (e) {
+
+        console.error(e);
+
+        log(
+          "❌ Erreur réseau"
+        );
+      }
+    }
+
+  </script>
 
 </body>
-  </html>
+
+</html>
