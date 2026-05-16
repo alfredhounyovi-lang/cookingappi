@@ -3,7 +3,6 @@
 
 <head>
   <meta charset="UTF-8" />
-
   <title>🍳 Cooking App - Pi</title>
 
   <!-- Pi SDK -->
@@ -59,19 +58,11 @@
 
   <hr style="margin-top:50px;">
 
-  <h3>
-    🧪 Section Testnet (10 transactions requises)
-  </h3>
+  <h3>🧪 Section Testnet (10 transactions requises)</h3>
 
-  <p>
-    Entrez l'adresse Testnet d'un ami
-  </p>
+  <p>Entrez l'adresse Testnet d'un ami</p>
 
-  <input
-    type="text"
-    id="friend-wallet"
-    placeholder="Adresse wallet Testnet G..."
-  />
+  <input type="text" id="friend-wallet" placeholder="Adresse wallet Testnet G..." />
 
   <br>
 
@@ -81,120 +72,74 @@
 
   <script>
 
-    // =========================
-    // GLOBALS
-    // =========================
-
-    const statusDiv =
-      document.getElementById("status");
-
+    const statusDiv = document.getElementById("status");
     let currentUser = null;
 
-    // =========================
-    // HELPERS
-    // =========================
-
     function setStatus(msg) {
-
       statusDiv.innerText = msg;
-
       console.log(msg);
     }
 
     function log(msg) {
-
       statusDiv.innerText += "\n" + msg;
-
       console.log(msg);
     }
 
     function isPiReady() {
-
-      return (
-        window.Pi &&
-        typeof window.Pi.createPayment === "function"
-      );
+      return window.Pi && typeof window.Pi.createPayment === "function";
     }
 
     // =========================
     // INIT PI SDK
     // =========================
-
     async function initPi() {
 
       try {
 
         if (!window.Pi) {
-
-          setStatus(
-            "❌ Pi SDK introuvable"
-          );
-
+          setStatus("❌ Pi SDK introuvable");
           return;
         }
 
-        // IMPORTANT
-        // false = MAINNET
-        // true = TESTNET
         window.Pi.init({
           version: "2.0",
           sandbox: true
         });
 
-        setStatus(
-          "🔄 Authentification Pi..."
+        setStatus("🔄 Authentification Pi...");
+
+        const scopes = ["payments", "username"];
+
+        const auth = await window.Pi.authenticate(
+          scopes,
+          function onIncompletePaymentFound(payment) {
+            console.log("Incomplete payment found:", payment);
+          }
         );
-
-        const scopes = [
-          "payments",
-          "username"
-        ];
-
-        // IMPORTANT FIX
-        const auth =
-          await window.Pi.authenticate(
-            scopes,
-            function onIncompletePaymentFound(payment) {
-
-              console.log(
-                "Incomplete payment found:",
-                payment
-              );
-            }
-          );
 
         currentUser = auth.user;
 
         setStatus(
           "✔️ Connecté à Pi\n" +
-          "Utilisateur: " +
-          currentUser.username
+          "Utilisateur: " + currentUser.username
         );
 
-        log(
-          "UID: " +
-          currentUser.uid
-        );
+        log("UID: " + currentUser.uid);
 
       } catch (e) {
 
-        console.error(e);
+        console.error("PI AUTH ERROR:", e);
 
         setStatus(
           "❌ Erreur Pi SDK\n\n" +
-          "➡️ Vérifie :\n" +
-          "- ouverture dans Pi Browser\n" +
-          "- app enregistrée Pi Developer Portal\n" +
-          "- domaine validé\n" +
-          "- Pi Browser connecté"
+          JSON.stringify(e, null, 2)
         );
       }
     }
 
     // =========================
-    // SAFE WAIT SDK
+    // WAIT SDK
     // =========================
-
     let tries = 0;
 
     const interval = setInterval(() => {
@@ -202,42 +147,28 @@
       tries++;
 
       if (window.Pi) {
-
         clearInterval(interval);
-
         initPi();
       }
 
       if (tries > 20) {
-
         clearInterval(interval);
-
-        setStatus(
-          "❌ Pi SDK non détecté\n\n" +
-          "➡️ Ouvre l'app dans Pi Browser"
-        );
+        setStatus("❌ Pi SDK non détecté\n\n➡️ Ouvre l'app dans Pi Browser");
       }
 
     }, 500);
 
     // =========================
-    // MAIN PAYMENT
+    // PAYMENT
     // =========================
-
     async function startPayment() {
 
       if (!currentUser) {
-
-        alert(
-          "Utilisateur Pi non connecté"
-        );
-
+        alert("Utilisateur Pi non connecté");
         return;
       }
 
-      setStatus(
-        "🔄 Lancement paiement Pi..."
-      );
+      setStatus("🔄 Lancement paiement Pi...");
 
       try {
 
@@ -245,154 +176,68 @@
           {
             amount: 1,
             memo: "Cooking App Order",
-            metadata: {
-              product: "food"
-            }
+            metadata: { product: "food" }
           },
 
           {
 
-            // =====================
-            // APPROVE
-            // =====================
+            onReadyForServerApproval: async function (paymentId) {
 
-            onReadyForServerApproval:
-            async function(paymentId) {
-
-              log(
-                "APPROVE: " +
-                paymentId
-              );
+              log("APPROVE: " + paymentId);
 
               try {
 
-                const res =
-                  await fetch(
-                    "/api/approve",
-                    {
-                      method: "POST",
-                      headers: {
-                        "Content-Type":
-                        "application/json"
-                      },
-                      body: JSON.stringify({
-                        paymentId
-                      })
-                    }
-                  );
+                const res = await fetch("/api/approve", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ paymentId })
+                });
 
-                const data =
-                  await res.json();
-
+                const data = await res.json();
                 console.log(data);
 
-                if (res.ok) {
-
-                  log(
-                    "✔️ approve OK"
-                  );
-
-                } else {
-
-                  log(
-                    "❌ approve failed"
-                  );
-                }
+                log(res.ok ? "✔️ approve OK" : "❌ approve failed");
 
               } catch (e) {
-
                 console.error(e);
-
-                log(
-                  "❌ approve network error"
-                );
+                log("❌ approve network error");
               }
             },
 
-            // =====================
-            // COMPLETE
-            // =====================
+            onReadyForServerCompletion: async function (paymentId, txid) {
 
-            onReadyForServerCompletion:
-            async function(paymentId, txid) {
-
-              log(
-                "COMPLETE: " +
-                paymentId
-              );
+              log("COMPLETE: " + paymentId);
 
               try {
 
-                const res =
-                  await fetch(
-                    "/api/complete",
-                    {
-                      method: "POST",
-                      headers: {
-                        "Content-Type":
-                        "application/json"
-                      },
-                      body: JSON.stringify({
-                        paymentId,
-                        txid
-                      })
-                    }
-                  );
+                const res = await fetch("/api/complete", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ paymentId, txid })
+                });
 
-                const data =
-                  await res.json();
-
+                const data = await res.json();
                 console.log(data);
 
-                if (res.ok) {
-
-                  log(
-                    "🎉 Paiement terminé"
-                  );
-
-                } else {
-
-                  log(
-                    "❌ complete failed"
-                  );
-                }
+                log(res.ok ? "🎉 Paiement terminé" : "❌ complete failed");
 
               } catch (e) {
-
                 console.error(e);
-
-                log(
-                  "❌ complete network error"
-                );
+                log("❌ complete network error");
               }
             },
 
-            // =====================
-            // CANCEL
-            // =====================
-
-            onCancel: function() {
-
-              setStatus(
-                "⚠️ Paiement annulé"
-              );
+            onCancel: function () {
+              setStatus("⚠️ Paiement annulé");
             },
 
-            // =====================
-            // ERROR
-            // =====================
-
-            onError: function(error) {
+            onError: function (error) {
 
               console.error(error);
 
-              log(
-                "❌ Payment Error"
-              );
-
               setStatus(
                 "❌ Erreur paiement Pi\n\n" +
-                JSON.stringify(error)
+                JSON.stringify(error, null, 2)
               );
             }
 
@@ -400,113 +245,54 @@
         );
 
       } catch (e) {
-
         console.error(e);
-
-        setStatus(
-          "❌ createPayment FAILED"
-        );
+        setStatus("❌ createPayment FAILED");
       }
     }
 
     // =========================
     // TESTNET REWARD
     // =========================
-
     async function sendTestReward() {
 
-      const addr =
-        document
-        .getElementById(
-          "friend-wallet"
-        )
-        .value
-        .trim();
+      const addr = document.getElementById("friend-wallet").value.trim();
 
-      if (!addr) {
+      if (!addr) return alert("Veuillez entrer une adresse wallet");
+      if (!currentUser) return alert("Utilisateur Pi non connecté");
 
-        alert(
-          "Veuillez entrer une adresse wallet"
-        );
-
-        return;
-      }
-
-      if (!currentUser) {
-
-        alert(
-          "Utilisateur Pi non connecté"
-        );
-
-        return;
-      }
-
-      setStatus(
-        "🔄 Envoi récompense Testnet..."
-      );
+      setStatus("🔄 Envoi récompense Testnet...");
 
       try {
 
-        const res =
-          await fetch(
-            "/api/testnet-reward",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type":
-                "application/json"
-              },
+        const res = await fetch("/api/testnet-reward", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userWalletAddress: addr,
+            uid: currentUser.uid
+          })
+        });
 
-              body: JSON.stringify({
-
-                userWalletAddress:
-                  addr,
-
-                uid:
-                  currentUser.uid
-              })
-            }
-          );
-
-        const data =
-          await res.json();
-
+        const data = await res.json();
         console.log(data);
 
         if (res.ok) {
 
-          log(
-            "✔️ Récompense envoyée"
-          );
+          log("✔️ Récompense envoyée");
+          log("Wallet: " + addr);
 
-          log(
-            "Wallet: " + addr
-          );
-
-          alert(
-            "Transaction Testnet réussie !"
-          );
+          alert("Transaction Testnet réussie !");
 
         } else {
 
-          console.error(data);
-
-          log(
-            "❌ Échec transaction"
-          );
-
-          alert(
-            "Erreur transaction Testnet"
-          );
+          log("❌ Échec transaction");
+          alert("Erreur transaction Testnet");
         }
 
       } catch (e) {
 
         console.error(e);
-
-        log(
-          "❌ Erreur réseau"
-        );
+        log("❌ Erreur réseau");
       }
     }
 
