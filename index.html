@@ -1,114 +1,78 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Cooking App Test</title>
+  <meta charset="UTF-8">
+  <title>Cooking App - Test Pi Transactions</title>
 
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 40px;
+  <script>
+    const Pi = window.Pi;
+
+    // Init SDK
+    Pi.init({ version: "2.0", sandbox: true });
+
+    let transactionCount = 0;
+
+    async function login() {
+      try {
+        const auth = await Pi.authenticate(["username", "payments"]);
+        console.log("Connecté :", auth);
+        alert("Connecté : " + auth.user.username);
+      } catch (err) {
+        console.error(err);
+      }
     }
 
-    #status {
-      margin-top: 20px;
-      border: 1px solid #ccc;
-      padding: 20px;
-      border-radius: 10px;
-      white-space: pre-line;
+    // 🔥 Fonction pour faire une transaction test
+    async function makePayment() {
+      if (transactionCount >= 10) {
+        alert("🎉 Tu as déjà fait les 10 transactions !");
+        return;
+      }
+
+      try {
+        const payment = await Pi.createPayment({
+          amount: 0.01, // petit montant test
+          memo: "Test transaction " + (transactionCount + 1),
+          metadata: { order: transactionCount + 1 }
+        });
+
+        console.log("Paiement créé :", payment);
+
+        transactionCount++;
+
+        alert("Transaction " + transactionCount + "/10 réussie ✅");
+
+        if (transactionCount === 10) {
+          alert("🎉 Bravo ! 10 transactions complétées");
+        }
+
+      } catch (err) {
+        console.error("Erreur paiement :", err);
+        alert("Erreur transaction ❌");
+      }
     }
-  </style>
+  </script>
 </head>
-<body>
 
-  <h1>🍳 Cooking App</h1>
+<body style="text-align:center; font-family: Arial;">
 
-  <button onclick="connectPi()">
-    Connecter Pi
-  </button>
+  <h1>🍳 Cooking App - Test Pi</h1>
 
-  <div id="status">
-    En attente...
-  </div>
+  <button onclick="login()">🔑 Connecter Pi</button>
+  <br><br>
+
+  <button onclick="makePayment()">💳 Faire une transaction test</button>
+
+  <p id="status">Transactions : 0 / 10</p>
 
   <script>
-    console.log("PI CHECK:", window.Pi);
+    setInterval(() => {
+      document.getElementById("status").innerText =
+        "Transactions : " + transactionCount + " / 10";
+    }, 1000);
+  </script>
 
-const statusDiv = document.getElementById("status");
-let PiInstance = null;
-
-function setStatus(msg) {
-  statusDiv.innerText = msg;
-  console.log(msg);
-}
-
-function waitForPi() {
-  return new Promise((resolve, reject) => {
-
-    let tries = 0;
-
-    const interval = setInterval(() => {
-
-      tries++;
-
-      if (window.Pi) {
-        clearInterval(interval);
-        resolve(window.Pi);
-      }
-
-      if (tries > 30) {
-        clearInterval(interval);
-        reject(new Error("Pi SDK not loaded"));
-      }
-
-    }, 300);
-  });
-}
-
-async function connectPi() {
-
-  try {
-
-    setStatus("🔄 Chargement Pi SDK...");
-
-    const Pi = await waitForPi();
-
-    Pi.init({
-      version: "2.0",
-      sandbox: true
-    });
-
-    PiInstance = Pi;
-
-    setStatus("🔄 Authentification Pi...");
-
-    const auth = await Pi.authenticate(
-      ["username", "payments"],
-      function(payment) {
-        console.log(payment);
-      }
-    );
-
-    setStatus(
-      "✅ Connecté\n\n" +
-      "Utilisateur: " + auth.user.username + "\n" +
-      "UID: " + auth.user.uid
-    );
-
-  } catch (e) {
-
-    console.error(e);
-
-    setStatus(
-      "❌ Erreur Pi SDK\n\n" +
-      (e.message || JSON.stringify(e))
-    );
-  }
-}
-
-      </script>
 </body>
 </html>
