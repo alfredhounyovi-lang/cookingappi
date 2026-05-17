@@ -1,78 +1,254 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Cooking App - Test Pi Transactions</title>
+  <meta charset="UTF-8" />
+  <title>🍳 Cooking App - Pi Testnet</title>
 
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      max-width: 800px;
+      margin: auto;
+      text-align: center;
+      padding: 30px;
+      background: #fafafa;
+    }
+
+    h1 {
+      color: #5c2d91;
+    }
+
+    button {
+      padding: 14px 20px;
+      margin: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      background: #5c2d91;
+      color: white;
+    }
+
+    input {
+      width: 85%;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+
+    #status {
+      margin-top: 20px;
+      text-align: left;
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      white-space: pre-line;
+      min-height: 160px;
+    }
+  </style>
 
   <script>
     const Pi = window.Pi;
 
-    // Init SDK
     Pi.init({ version: "2.0", sandbox: true });
 
+    let currentUser = null;
     let transactionCount = 0;
 
+    const statusDiv = () => document.getElementById("status");
+
+    function setStatus(msg) {
+      statusDiv().innerText = msg;
+    }
+
+    function log(msg) {
+      statusDiv().innerText += "\n" + msg;
+    }
+
+    // =========================
+    // LOGIN PI
+    // =========================
     async function login() {
       try {
         const auth = await Pi.authenticate(["username", "payments"]);
-        console.log("Connecté :", auth);
-        alert("Connecté : " + auth.user.username);
+
+        currentUser = auth.user;
+
+        setStatus(
+          "✔️ Connecté à Pi\n\n" +
+          "Utilisateur: " + currentUser.username
+        );
+
+        log("UID: " + currentUser.uid);
+
       } catch (err) {
         console.error(err);
+        setStatus("❌ Erreur connexion Pi");
       }
     }
 
-    // 🔥 Fonction pour faire une transaction test
+    // =========================
+    // 10 TRANSACTIONS TEST
+    // =========================
     async function makePayment() {
+
+      if (!currentUser) {
+        alert("Connecte-toi d'abord");
+        return;
+      }
+
       if (transactionCount >= 10) {
-        alert("🎉 Tu as déjà fait les 10 transactions !");
+        alert("🎉 Tu as déjà fait 10 transactions");
         return;
       }
 
       try {
+
         const payment = await Pi.createPayment({
-          amount: 0.01, // petit montant test
+          amount: 0.01,
           memo: "Test transaction " + (transactionCount + 1),
-          metadata: { order: transactionCount + 1 }
+          metadata: {
+            order: transactionCount + 1
+          }
         });
 
-        console.log("Paiement créé :", payment);
+        console.log(payment);
 
         transactionCount++;
 
-        alert("Transaction " + transactionCount + "/10 réussie ✅");
+        setStatus(
+          "💳 Transaction " +
+          transactionCount +
+          "/10 réussie"
+        );
 
         if (transactionCount === 10) {
-          alert("🎉 Bravo ! 10 transactions complétées");
+          alert("🎉 Bravo ! 10 transactions terminées");
         }
 
       } catch (err) {
-        console.error("Erreur paiement :", err);
+        console.error(err);
         alert("Erreur transaction ❌");
       }
     }
+
+    // =========================
+    // ENVOI VERS ADRESSE
+    // =========================
+    async function sendToAddress() {
+
+      const address =
+        document.getElementById("walletAddress").value.trim();
+
+      if (!address) {
+        alert("Entre une adresse wallet");
+        return;
+      }
+
+      if (!currentUser) {
+        alert("Connecte-toi d'abord");
+        return;
+      }
+
+      if (transactionCount >= 10) {
+        alert("Limite 10 transactions atteinte");
+        return;
+      }
+
+      try {
+
+        setStatus("🔄 Envoi vers " + address);
+
+        const payment = await Pi.createPayment({
+          amount: 0.01,
+          memo: "Envoi Cooking App",
+          metadata: {
+            to: address,
+            order: transactionCount + 1
+          }
+        });
+
+        console.log(payment);
+
+        transactionCount++;
+
+        setStatus(
+          "✔️ Envoyé vers:\n" +
+          address +
+          "\n\nTransaction " +
+          transactionCount +
+          "/10"
+        );
+
+      } catch (err) {
+        console.error(err);
+        setStatus("❌ Erreur envoi");
+      }
+    }
+
+    // =========================
+    // AUTO CHECK SDK
+    // =========================
+    let tries = 0;
+
+    const interval = setInterval(() => {
+
+      tries++;
+
+      if (window.Pi) {
+        clearInterval(interval);
+      }
+
+      if (tries > 20) {
+        clearInterval(interval);
+        setStatus("❌ Ouvre dans Pi Browser");
+      }
+
+    }, 500);
+
+    // status updater
+    setInterval(() => {
+      const el = document.getElementById("status-counter");
+      if (el) {
+        el.innerText = "Transactions : " + transactionCount + " / 10";
+      }
+    }, 1000);
+
   </script>
 </head>
 
-<body style="text-align:center; font-family: Arial;">
+<body>
 
-  <h1>🍳 Cooking App - Test Pi</h1>
+  <h1>🍳 Cooking App</h1>
 
   <button onclick="login()">🔑 Connecter Pi</button>
-  <br><br>
+  <button onclick="makePayment()">💳 Transaction Test</button>
 
-  <button onclick="makePayment()">💳 Faire une transaction test</button>
+  <p id="status-counter">Transactions : 0 / 10</p>
 
-  <p id="status">Transactions : 0 / 10</p>
+  <hr>
 
-  <script>
-    setInterval(() => {
-      document.getElementById("status").innerText =
-        "Transactions : " + transactionCount + " / 10";
-    }, 1000);
-  </script>
+  <h3>📤 Envoyer à une adresse wallet</h3>
+
+  <input
+    id="walletAddress"
+    placeholder="Colle ici l'adresse G..."
+  />
+
+  <br>
+
+  <button onclick="sendToAddress()">
+    🚀 Envoyer 0.01 π
+  </button>
+
+  <div id="status">
+    Initialisation...
+  </div>
 
 </body>
 </html>
