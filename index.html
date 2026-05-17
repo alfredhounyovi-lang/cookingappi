@@ -36,73 +36,78 @@
 
   <script>
 
-    const statusDiv =
-      document.getElementById("status");
+const statusDiv = document.getElementById("status");
+let PiInstance = null;
 
-    function setStatus(msg) {
-      statusDiv.innerText = msg;
-      console.log(msg);
-    }
+function setStatus(msg) {
+  statusDiv.innerText = msg;
+  console.log(msg);
+}
 
-    async function connectPi() {
+function waitForPi() {
+  return new Promise((resolve, reject) => {
 
-      try {
+    let tries = 0;
 
-        if (!window.Pi) {
+    const interval = setInterval(() => {
 
-          setStatus(
-            "❌ Pi SDK introuvable\n\n" +
-            "Ouvre l'app dans Pi Browser"
-          );
+      tries++;
 
-          return;
-        }
-
-        const Pi = window.Pi;
-
-        // INIT
-        Pi.init({
-          sandbox: true
-        });
-
-        setStatus(
-          "🔄 Connexion Pi..."
-        );
-
-        // petit délai
-        await new Promise(resolve =>
-          setTimeout(resolve, 1500)
-        );
-
-        // AUTH
-        const auth =
-          await Pi.authenticate(
-            ["username", "payments"],
-            function(payment) {
-              console.log(payment);
-            }
-          );
-
-        setStatus(
-          "✅ Connecté\n\n" +
-          "Utilisateur: " +
-          auth.user.username +
-          "\nUID: " +
-          auth.user.uid
-        );
-
-      } catch (e) {
-
-        console.error(e);
-
-        setStatus(
-          "❌ Erreur\n\n" +
-          (e.message || "Erreur inconnue")
-        );
+      if (window.Pi) {
+        clearInterval(interval);
+        resolve(window.Pi);
       }
-    }
 
-  </script>
+      if (tries > 30) {
+        clearInterval(interval);
+        reject(new Error("Pi SDK not loaded"));
+      }
 
+    }, 300);
+  });
+}
+
+async function connectPi() {
+
+  try {
+
+    setStatus("🔄 Chargement Pi SDK...");
+
+    const Pi = await waitForPi();
+
+    Pi.init({
+      version: "2.0",
+      sandbox: true
+    });
+
+    PiInstance = Pi;
+
+    setStatus("🔄 Authentification Pi...");
+
+    const auth = await Pi.authenticate(
+      ["username", "payments"],
+      function(payment) {
+        console.log(payment);
+      }
+    );
+
+    setStatus(
+      "✅ Connecté\n\n" +
+      "Utilisateur: " + auth.user.username + "\n" +
+      "UID: " + auth.user.uid
+    );
+
+  } catch (e) {
+
+    console.error(e);
+
+    setStatus(
+      "❌ Erreur Pi SDK\n\n" +
+      (e.message || JSON.stringify(e))
+    );
+  }
+}
+
+      </script>
 </body>
 </html>
