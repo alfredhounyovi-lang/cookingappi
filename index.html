@@ -3,12 +3,14 @@
 
 <head>
   <meta charset="UTF-8" />
+
   <title>🍳 Cooking App - Pi Testnet</title>
 
   <!-- Pi SDK -->
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
   <style>
+
     body {
       font-family: Arial, sans-serif;
       max-width: 800px;
@@ -53,6 +55,7 @@
       font-weight: bold;
       background: white;
     }
+
   </style>
 </head>
 
@@ -70,9 +73,13 @@
 
   <hr style="margin-top:50px;">
 
-  <h3>🧪 Section Testnet (10 transactions requises)</h3>
+  <h3>
+    🧪 Section Testnet (10 transactions requises)
+  </h3>
 
-  <p>Entrez l'adresse Testnet d'un ami</p>
+  <p>
+    Entrez l'adresse Testnet d'un ami
+  </p>
 
   <input
     type="text"
@@ -123,6 +130,10 @@
 
       try {
 
+        // =====================
+        // CHECK SDK
+        // =====================
+
         if (!window.Pi) {
 
           setStatus(
@@ -134,10 +145,12 @@
         }
 
         // =====================
-        // TESTNET
+        // INIT SDK
         // =====================
 
-        window.Pi.init({
+        const Pi = window.Pi;
+
+        Pi.init({
 
           version: "2.0",
 
@@ -148,6 +161,10 @@
           "🔄 Authentification Pi..."
         );
 
+        // =====================
+        // AUTH
+        // =====================
+
         const scopes = [
 
           "payments",
@@ -156,14 +173,14 @@
         ];
 
         const auth =
-          await window.Pi.authenticate(
+          await Pi.authenticate(
 
             scopes,
 
             function onIncompletePaymentFound(payment) {
 
               console.log(
-                "Incomplete payment:",
+                "Incomplete payment found:",
                 payment
               );
             }
@@ -217,7 +234,7 @@
     }
 
     // =========================
-    // WAIT SDK
+    // WAIT FOR SDK
     // =========================
 
     let tries = 0;
@@ -238,7 +255,9 @@
         clearInterval(interval);
 
         setStatus(
+
           "❌ Pi SDK non détecté\n\n" +
+
           "➡️ Ouvre l'app dans Pi Browser"
         );
       }
