@@ -2,20 +2,13 @@
 <html lang="fr">
 
 <head>
-
 <meta charset="UTF-8" />
-
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0"
-/>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>🍳 Cooking App - Pi Testnet</title>
 
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
 <style>
-
 body{
   font-family:Arial,sans-serif;
   max-width:750px;
@@ -25,9 +18,7 @@ body{
   background:#fafafa;
 }
 
-h1{
-  color:#5c2d91;
-}
+h1{ color:#5c2d91; }
 
 button{
   padding:14px 20px;
@@ -40,9 +31,7 @@ button{
   margin:10px;
 }
 
-button:hover{
-  opacity:0.9;
-}
+button:hover{ opacity:0.9; }
 
 input{
   width:92%;
@@ -50,7 +39,6 @@ input{
   border-radius:10px;
   border:1px solid #ccc;
   margin-top:10px;
-  font-size:15px;
 }
 
 #status{
@@ -77,502 +65,227 @@ input{
   border-radius:12px;
   border:1px solid #ddd;
 }
-
 </style>
-
 </head>
 
 <body>
 
 <h1>🍳 Cooking App</h1>
 
-<button onclick="login()">
-🔑 Connecter Pi
-</button>
+<button onclick="login()">🔑 Connecter Pi</button>
+<button onclick="testPayment()">💳 Transaction Test</button>
+<button onclick="fixPendingPayments()">🛠 Confirmer Paiements</button>
 
-<button onclick="testPayment()">
-💳 Transaction Test
-</button>
-
-<button onclick="fixPendingPayments()">
-🛠 Confirmer Paiements
-</button>
-
-<div class="counter" id="counter">
-Transactions : 0 / 10
-</div>
+<div class="counter" id="counter">Transactions : 0 / 10</div>
 
 <div class="wallet-box">
+<h3>📤 Wallet Testnet</h3>
 
-<h3>
-📤 Wallet Testnet
-</h3>
-
-<input
-  id="walletAddress"
-  placeholder="Colle une adresse Testnet G..."
-/>
-
-<button onclick="saveWallet()">
-💾 Ajouter Adresse
-</button>
-
+<input id="walletAddress" placeholder="Colle une adresse G..." />
+<button onclick="saveWallet()">💾 Ajouter Adresse</button>
 </div>
 
-<div id="status">
-Initialisation du SDK...
-</div>
+<div id="status">Initialisation...</div>
 
 <script>
 
-if (!window.Pi) {
-
-  document.getElementById(
-    "status"
-  ).innerText =
-
-    "❌ Pi SDK introuvable\n\n" +
-
-    "Ouvre cette app dans Pi Browser";
-
-  throw new Error(
-    "Pi SDK not found"
-  );
-
+if(!window.Pi){
+  document.getElementById("status").innerText =
+    "❌ Ouvre dans Pi Browser";
+  throw new Error("Pi SDK missing");
 }
 
 const Pi = window.Pi;
 
 Pi.init({
-
-  version: "2.0",
-
-  sandbox: true
-
+  version:"2.0",
+  sandbox:true
 });
 
 let currentUser = null;
 let txCount = 0;
 let walletList = [];
 let paymentRunning = false;
+let activePaymentId = null;
 
-function setStatus(message){
-
-  document.getElementById(
-    "status"
-  ).innerText = message;
-
+/* ================= STATUS ================= */
+function setStatus(msg){
+  document.getElementById("status").innerText = msg;
 }
 
 function updateCounter(){
-
-  document.getElementById(
-    "counter"
-  ).innerText =
-
-    "Transactions : " +
-
-    txCount +
-
-    " / 10";
-
+  document.getElementById("counter").innerText =
+    "Transactions : " + txCount + " / 10";
 }
 
+/* ================= WALLET ================= */
 function saveWallet(){
+  const input = document.getElementById("walletAddress");
+  const address = input.value.trim();
 
-  const input =
-    document.getElementById(
-      "walletAddress"
-    );
-
-  const address =
-    input.value.trim();
-
-  if(!address){
-
-    alert(
-      "Entre une adresse"
-    );
-
-    return;
-  }
-
-  if(!address.startsWith("G")){
-
-    alert(
-      "Adresse Pi invalide"
-    );
-
-    return;
-  }
+  if(!address) return alert("Adresse vide");
+  if(!address.startsWith("G")) return alert("Adresse invalide");
 
   walletList.push(address);
-
   input.value = "";
 
-  setStatus(
-
-    "✅ Adresse ajoutée\n\n" +
-
-    walletList.join("\n")
-
-  );
-
+  setStatus("✅ Wallet ajouté\n\n" + walletList.join("\n"));
 }
 
+/* ================= BACKEND ================= */
 async function approvePayment(paymentId){
 
-  const response = await fetch(
+  const res = await fetch("/api/approve", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({paymentId})
+  });
 
-    "/api/approve",
+  const data = await res.json();
 
-    {
-
-      method:"POST",
-
-      headers:{
-        "Content-Type":
-        "application/json"
-      },
-
-      body:JSON.stringify({
-        paymentId
-      })
-
-    }
-
-  );
-
-  const data =
-    await response.json();
-
-  if(!response.ok){
-
-    throw new Error(
-      data.error ||
-      "Erreur approval"
-    );
-
-  }
+  if(!res.ok) throw new Error(data.error || "approve error");
 
   return data;
-
 }
 
 async function completePayment(paymentId){
 
-  const response = await fetch(
+  const res = await fetch("/api/complete", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({paymentId})
+  });
 
-    "/api/complete",
+  const data = await res.json();
 
-    {
-
-      method:"POST",
-
-      headers:{
-        "Content-Type":
-        "application/json"
-      },
-
-      body:JSON.stringify({
-        paymentId
-      })
-
-    }
-
-  );
-
-  const data =
-    await response.json();
-
-  if(!response.ok){
-
-    throw new Error(
-      data.error ||
-      "Erreur completion"
-    );
-
-  }
+  if(!res.ok) throw new Error(data.error || "complete error");
 
   return data;
-
 }
 
+/* ================= LOGIN ================= */
 async function login(){
-
   try{
+    setStatus("🔄 Connexion Pi...");
 
-    setStatus(
-      "🔄 Connexion Pi..."
-    );
-
-    const auth =
-
-      await Pi.authenticate(
-
-        ["payments", "username"],
-
-        async function(payment){
-
-          console.log(
-            "⚠️ PENDING:",
-            payment
-          );
-
-        }
-
-      );
+    const auth = await Pi.authenticate(["payments","username"]);
 
     currentUser = auth.user;
 
     setStatus(
-
-      "✅ Connecté\n\n" +
-
-      currentUser.username
-
+      "✅ Connecté\n\n" + currentUser.username
     );
 
-  }catch(error){
-
-    console.error(error);
-
-    setStatus(
-
-      "❌ Erreur connexion\n\n" +
-
-      (
-        error.message ||
-
-        JSON.stringify(
-          error,
-          null,
-          2
-        )
-      )
-
-    );
-
+  }catch(e){
+    setStatus("❌ Login error\n\n" + e.message);
   }
-
 }
 
-async function fixPendingPayments(){
-
-  try{
-
-    setStatus(
-      "🔄 Recherche paiements..."
-    );
-
-    await Pi.authenticate(
-
-      ["payments"],
-
-      async function(payment){
-
-        const paymentId =
-          payment.identifier;
-
-        if(!paymentId){
-
-          setStatus(
-            "❌ Aucun paiement trouvé"
-          );
-
-          return;
-        }
-
-        setStatus(
-          "🟡 Approval..."
-        );
-
-        await approvePayment(
-          paymentId
-        );
-
-        setStatus(
-          "🟡 Completion..."
-        );
-
-        await completePayment(
-          paymentId
-        );
-
-        setStatus(
-          "✅ Paiement confirmé"
-        );
-
-      }
-
-    );
-
-  }catch(error){
-
-    console.error(error);
-
-    setStatus(
-
-      "❌ Erreur confirmation\n\n" +
-
-      (
-        error.message ||
-
-        JSON.stringify(
-          error,
-          null,
-          2
-        )
-      )
-
-    );
-
-  }
-
-}
-
+/* ================= PAYMENT ================= */
 function testPayment(){
 
-  if(paymentRunning){
-
-    alert(
-      "Paiement déjà en cours"
-    );
-
-    return;
-  }
-
-  if(!currentUser){
-
-    alert(
-      "Connecte-toi d'abord"
-    );
-
-    return;
-  }
+  if(paymentRunning) return alert("Déjà en cours");
+  if(!currentUser) return alert("Connecte-toi");
 
   paymentRunning = true;
+  activePaymentId = null;
 
   Pi.createPayment(
-
     {
-
-      amount: 0.01,
-
-      memo:
-        "Cooking App Test",
-
-      metadata:{
-        wallets: walletList
-      }
-
+      amount:0.01,
+      memo:"Cooking App Test #" + Date.now(),
+      metadata:{wallets:walletList}
     },
-
     {
 
-      onReadyForServerApproval:
-      async function(paymentId){
+      onReadyForServerApproval: async function(paymentId){
 
         try{
+          activePaymentId = paymentId;
 
-          setStatus(
-            "🟡 Approval..."
-          );
+          setStatus("🟡 Approval...");
 
-          await approvePayment(
-            paymentId
-          );
+          await approvePayment(paymentId);
 
-        }catch(error){
+          setStatus("✅ Approved");
 
+        }catch(e){
           paymentRunning = false;
-
-          setStatus(
-            error.message
-          );
-
+          setStatus("❌ Approval error\n\n" + e.message);
         }
-
       },
 
-      onReadyForServerCompletion:
-      async function(paymentId){
+      onReadyForServerCompletion: async function(paymentId, txid){
 
         try{
+          setStatus("🟡 Completion...");
 
-          setStatus(
-            "🟡 Completion..."
-          );
-
-          await completePayment(
-            paymentId
-          );
+          await completePayment(paymentId);
 
           txCount++;
-
           updateCounter();
 
           paymentRunning = false;
 
           setStatus(
-            "✅ Transaction réussie"
+            "✅ Paiement confirmé\n\nTXID:\n" + txid
           );
 
-        }catch(error){
-
+        }catch(e){
           paymentRunning = false;
-
-          setStatus(
-            error.message
-          );
-
+          setStatus("❌ Completion error\n\n" + e.message);
         }
-
       },
 
       onCancel:function(){
-
         paymentRunning = false;
-
-        setStatus(
-          "❌ Paiement annulé"
-        );
-
+        setStatus("❌ Cancelled");
       },
 
-      onError:function(error){
-
+      onError:function(err){
         paymentRunning = false;
-
-        setStatus(
-
-          "❌ Erreur Pi SDK\n\n" +
-
-          JSON.stringify(
-            error,
-            null,
-            2
-          )
-
-        );
-
+        setStatus("❌ SDK Error\n\n" + JSON.stringify(err,null,2));
       }
 
     }
-
   );
-
 }
 
-window.onload = function(){
+/* ================= FIX PENDING ================= */
+async function fixPendingPayments(){
 
-  setStatus(
-    "✅ SDK Pi chargé"
-  );
+  try{
 
+    setStatus("🔄 Checking pending...");
+
+    await Pi.authenticate(["payments"], async function(payment){
+
+      const paymentId = payment.identifier;
+
+      if(!paymentId){
+        setStatus("❌ Aucun pending");
+        return;
+      }
+
+      setStatus("🟡 Fixing pending...");
+
+      await approvePayment(paymentId);
+      await completePayment(paymentId);
+
+      setStatus("✅ Pending fixed");
+
+    });
+
+  }catch(e){
+    setStatus("❌ Error\n\n" + e.message);
+  }
+}
+
+window.onload = () => {
+  setStatus("✅ SDK prêt");
 };
 
 </script>
 
 </body>
-  </html>
+</html>
