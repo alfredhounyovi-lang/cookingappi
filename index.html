@@ -94,6 +94,10 @@ input{
 💳 Transaction Test
 </button>
 
+<button onclick="fixPendingPayments()">
+🛠 Confirmer Paiements
+</button>
+
 <div class="counter" id="counter">
 Transactions : 0 / 10
 </div>
@@ -139,8 +143,6 @@ if (!window.Pi) {
 
 const Pi = window.Pi;
 
-console.log("✅ PI SDK:", Pi);
-
 Pi.init({
 
   version: "2.0",
@@ -148,10 +150,6 @@ Pi.init({
   sandbox: true
 
 });
-
-console.log(
-  "✅ Pi SDK initialisé"
-);
 
 let currentUser = null;
 let txCount = 0;
@@ -183,13 +181,11 @@ function updateCounter(){
 function saveWallet(){
 
   const input =
-
     document.getElementById(
       "walletAddress"
     );
 
   const address =
-
     input.value.trim();
 
   if(!address){
@@ -204,11 +200,7 @@ function saveWallet(){
   if(!address.startsWith("G")){
 
     alert(
-
-      "Adresse Pi invalide\n\n" +
-
-      "Une adresse Pi commence par G"
-
+      "Adresse Pi invalide"
     );
 
     return;
@@ -222,29 +214,90 @@ function saveWallet(){
 
     "✅ Adresse ajoutée\n\n" +
 
-    "Total wallets : " +
-
-    walletList.length +
-
-    "\n\n" +
-
     walletList.join("\n")
 
   );
 
 }
 
-async function login(){
+async function approvePayment(paymentId){
 
-  try{
+  const response = await fetch(
 
-    setStatus(
-      "🔄 Connexion Pi..."
+    "/api/approve",
+
+    {
+
+      method:"POST",
+
+      headers:{
+        "Content-Type":
+        "application/json"
+      },
+
+      body:JSON.stringify({
+        paymentId
+      })
+
+    }
+
+  );
+
+  const data =
+    await response.json();
+
+  if(!response.ok){
+
+    throw new Error(
+      data.error ||
+      "Erreur approval"
     );
 
-    const auth =
+  }
 
-      await Pi.authenticate(
+  return data;
+
+}
+
+async function completePayment(paymentId){
+
+  const response = await fetch(
+
+    "/api/complete",
+
+    {
+
+      method:"POST",
+
+      headers:{
+        "Content-Type":
+        "application/json"
+      },
+
+      body:JSON.stringify({
+        paymentId
+      })
+
+    }
+
+  );
+
+  const data =
+    await response.json();
+
+  if(!response.ok){
+
+    throw new Error(
+      data.error ||
+      "Erreur completion"
+    );
+
+  }
+
+  return data;
+
+}
+
 async function login(){
 
   try{
@@ -262,80 +315,9 @@ async function login(){
         async function(payment){
 
           console.log(
-            "⚠️ PENDING PAYMENT:",
+            "⚠️ PENDING:",
             payment
           );
-
-          setStatus(
-
-            "⚠️ Paiement en attente détecté\n\n" +
-
-            JSON.stringify(
-              payment,
-              null,
-              2
-            )
-
-          );
-
-          try{
-
-            const paymentId =
-
-              payment.identifier;
-
-            if(!paymentId){
-
-              setStatus(
-                "❌ Payment ID introuvable"
-              );
-
-              return;
-            }
-
-            setStatus(
-              "🟡 Approval ancien paiement..."
-            );
-
-            await approvePayment(
-              paymentId
-            );
-
-            setStatus(
-              "🟡 Finalisation ancien paiement..."
-            );
-
-            await completePayment(
-              paymentId
-            );
-
-            setStatus(
-
-              "✅ Ancien paiement confirmé"
-
-            );
-
-          }catch(err){
-
-            console.error(err);
-
-            setStatus(
-
-              "❌ Impossible de compléter l'ancien paiement\n\n" +
-
-              (
-                err.message ||
-
-                JSON.stringify(
-                  err,
-                  null,
-                  2
-                )
-              )
-
-            );
-
-          }
 
         }
 
@@ -343,22 +325,11 @@ async function login(){
 
     currentUser = auth.user;
 
-    console.log(
-      "✅ USER:",
-      currentUser
-    );
-
     setStatus(
 
-      "✅ Connecté à Pi\n\n" +
+      "✅ Connecté\n\n" +
 
-      "Utilisateur : " +
-
-      currentUser.username +
-
-      "\nUID : " +
-
-      currentUser.uid
+      currentUser.username
 
     );
 
@@ -384,306 +355,53 @@ async function login(){
 
   }
 
-  }
-
-async function approvePayment(paymentId){
-
-  console.log(
-    "🟡 APPROVE REQUEST:",
-    paymentId
-  );
-
-  const response =
-
-    await fetch(
-
-      "/api/approve",
-
-      {
-
-        method:"POST",
-
-        headers:{
-          "Content-Type":
-          "application/json"
-        },
-
-        body:JSON.stringify({
-          paymentId
-        })
-
-      }
-
-    );
-
-  const data =
-
-    await response.json();
-
-  console.log(
-    "🟡 APPROVE RESPONSE:",
-    data
-  );
-
-  if(!response.ok){
-
-    throw new Error(
-
-      data.error ||
-
-      "Erreur approval"
-
-    );
-
-  }
-
-  return data;
-
 }
 
-async function completePayment(paymentId){
-
-  console.log(
-    "🟢 COMPLETE REQUEST:",
-    paymentId
-  );
-
-  const response =
-
-    await fetch(
-
-      "/api/complete",
-
-      {
-
-        method:"POST",
-
-        headers:{
-          "Content-Type":
-          "application/json"
-        },
-
-        body:JSON.stringify({
-          paymentId
-        })
-
-      }
-
-    );
-
-  const data =
-
-    await response.json();
-
-  console.log(
-    "🟢 COMPLETE RESPONSE:",
-    data
-  );
-
-  if(!response.ok){
-
-    throw new Error(
-
-      data.error ||
-
-      "Erreur completion"
-
-    );
-
-  }
-
-  return data;
-
-}
-
-function testPayment(){
-
-  if(paymentRunning){
-
-    alert(
-      "Un paiement est déjà en cours"
-    );
-
-    return;
-  }
-
-  if(!currentUser){
-
-    alert(
-      "Connecte-toi d'abord"
-    );
-
-    return;
-  }
-
-  if(txCount >= 10){
-
-    alert(
-      "🎉 Les 10 transactions sont terminées"
-    );
-
-    return;
-  }
-
-  paymentRunning = true;
+async function fixPendingPayments(){
 
   try{
 
     setStatus(
-      "🔄 Création paiement..."
+      "🔄 Recherche paiements..."
     );
 
-    Pi.createPayment(
+    await Pi.authenticate(
 
-      {
+      ["payments"],
 
-        amount: 0.01,
+      async function(payment){
 
-        memo:
+        const paymentId =
+          payment.identifier;
 
-          "Cooking App Test #" +
-
-          (txCount + 1) +
-
-          "-" +
-
-          Date.now(),
-
-        metadata:{
-
-          orderId:
-            txCount + 1,
-
-          wallets:
-            walletList
-
-        }
-
-      },
-
-      {
-
-        onReadyForServerApproval:
-        async function(paymentId){
-
-          try{
-
-            setStatus(
-              "🟡 Approval..."
-            );
-
-            await approvePayment(
-              paymentId
-            );
-
-            setStatus(
-              "✅ Paiement approuvé"
-            );
-
-          }catch(error){
-
-            console.error(error);
-
-            paymentRunning = false;
-
-            setStatus(
-
-              "❌ Approval erreur\n\n" +
-
-              error.message
-
-            );
-
-          }
-
-        },
-
-        onReadyForServerCompletion:
-        async function(paymentId){
-
-          try{
-
-            setStatus(
-              "🟡 Finalisation..."
-            );
-
-            await completePayment(
-              paymentId
-            );
-
-            txCount++;
-
-            updateCounter();
-
-            paymentRunning = false;
-
-            setStatus(
-
-              "✅ Transaction réussie\n\n" +
-
-              "Transactions : " +
-
-              txCount +
-
-              "/10"
-
-            );
-
-          }catch(error){
-
-            console.error(error);
-
-            paymentRunning = false;
-
-            setStatus(
-
-              "❌ Completion erreur\n\n" +
-
-              error.message
-
-            );
-
-          }
-
-        },
-
-        onCancel:function(paymentId){
-
-          console.log(
-            "❌ CANCEL:",
-            paymentId
-          );
-
-          paymentRunning = false;
+        if(!paymentId){
 
           setStatus(
-            "❌ Paiement annulé"
+            "❌ Aucun paiement trouvé"
           );
 
-        },
-
-        onError:function(error){
-
-          console.error(
-            "❌ SDK ERROR:",
-            error
-          );
-
-          paymentRunning = false;
-
-          setStatus(
-
-            "❌ Erreur Pi SDK\n\n" +
-
-            JSON.stringify(
-              error || {},
-              null,
-              2
-            )
-
-          );
-
+          return;
         }
+
+        setStatus(
+          "🟡 Approval..."
+        );
+
+        await approvePayment(
+          paymentId
+        );
+
+        setStatus(
+          "🟡 Completion..."
+        );
+
+        await completePayment(
+          paymentId
+        );
+
+        setStatus(
+          "✅ Paiement confirmé"
+        );
 
       }
 
@@ -693,11 +411,9 @@ function testPayment(){
 
     console.error(error);
 
-    paymentRunning = false;
-
     setStatus(
 
-      "❌ Erreur paiement\n\n" +
+      "❌ Erreur confirmation\n\n" +
 
       (
         error.message ||
@@ -715,9 +431,146 @@ function testPayment(){
 
 }
 
-setStatus(
-  "✅ SDK Pi chargé"
-);
+function testPayment(){
+
+  if(paymentRunning){
+
+    alert(
+      "Paiement déjà en cours"
+    );
+
+    return;
+  }
+
+  if(!currentUser){
+
+    alert(
+      "Connecte-toi d'abord"
+    );
+
+    return;
+  }
+
+  paymentRunning = true;
+
+  Pi.createPayment(
+
+    {
+
+      amount: 0.01,
+
+      memo:
+        "Cooking App Test",
+
+      metadata:{
+        wallets: walletList
+      }
+
+    },
+
+    {
+
+      onReadyForServerApproval:
+      async function(paymentId){
+
+        try{
+
+          setStatus(
+            "🟡 Approval..."
+          );
+
+          await approvePayment(
+            paymentId
+          );
+
+        }catch(error){
+
+          paymentRunning = false;
+
+          setStatus(
+            error.message
+          );
+
+        }
+
+      },
+
+      onReadyForServerCompletion:
+      async function(paymentId){
+
+        try{
+
+          setStatus(
+            "🟡 Completion..."
+          );
+
+          await completePayment(
+            paymentId
+          );
+
+          txCount++;
+
+          updateCounter();
+
+          paymentRunning = false;
+
+          setStatus(
+            "✅ Transaction réussie"
+          );
+
+        }catch(error){
+
+          paymentRunning = false;
+
+          setStatus(
+            error.message
+          );
+
+        }
+
+      },
+
+      onCancel:function(){
+
+        paymentRunning = false;
+
+        setStatus(
+          "❌ Paiement annulé"
+        );
+
+      },
+
+      onError:function(error){
+
+        paymentRunning = false;
+
+        setStatus(
+
+          "❌ Erreur Pi SDK\n\n" +
+
+          JSON.stringify(
+            error,
+            null,
+            2
+          )
+
+        );
+
+      }
+
+    }
+
+  );
+
+}
+
+window.onload = function(){
+
+  setStatus(
+    "✅ SDK Pi chargé"
+  );
+
+};
 
 </script>
 
