@@ -127,10 +127,9 @@ Pi.init({
 });
 
 let currentUser = null;
-
 let txCount = 0;
-
 let walletList = [];
+let paymentRunning = false;
 
 function setStatus(message){
 
@@ -240,7 +239,7 @@ async function login(){
 
       "❌ Erreur connexion\n\n" +
 
-      error.message
+      (error.message || JSON.stringify(error))
 
     );
 
@@ -338,6 +337,15 @@ async function completePayment(
 
 async function testPayment(){
 
+  if(paymentRunning){
+
+    alert(
+      "Un paiement est déjà en cours"
+    );
+
+    return;
+  }
+
   if(!currentUser){
 
     alert(
@@ -356,13 +364,15 @@ async function testPayment(){
     return;
   }
 
+  paymentRunning = true;
+
   try{
 
     setStatus(
       "🔄 Création paiement..."
     );
 
-    await Pi.createPayment(
+    Pi.createPayment(
 
       {
 
@@ -370,7 +380,9 @@ async function testPayment(){
 
         memo:
           "Cooking App Test #" +
-          (txCount + 1),
+          (txCount + 1) +
+          "-" +
+          Date.now(),
 
         metadata:{
 
@@ -391,6 +403,11 @@ async function testPayment(){
 
           try{
 
+            console.log(
+              "🟡 APPROVAL:",
+              paymentId
+            );
+
             setStatus(
 
               "🟡 Paiement créé\n\n" +
@@ -399,8 +416,14 @@ async function testPayment(){
 
             );
 
-            await approvePayment(
-              paymentId
+            const result =
+              await approvePayment(
+                paymentId
+              );
+
+            console.log(
+              "✅ APPROVED:",
+              result
             );
 
             setStatus(
@@ -416,6 +439,8 @@ async function testPayment(){
           }catch(error){
 
             console.error(error);
+
+            paymentRunning = false;
 
             setStatus(
 
@@ -437,18 +462,36 @@ async function testPayment(){
 
           try{
 
+            console.log(
+              "🟢 COMPLETION:",
+              paymentId
+            );
+
+            console.log(
+              "🟢 TXID:",
+              txid
+            );
+
             setStatus(
               "🟡 Finalisation..."
             );
 
-            await completePayment(
-              paymentId,
-              txid
+            const result =
+              await completePayment(
+                paymentId,
+                txid
+              );
+
+            console.log(
+              "✅ COMPLETED:",
+              result
             );
 
             txCount++;
 
             updateCounter();
+
+            paymentRunning = false;
 
             setStatus(
 
@@ -482,6 +525,8 @@ async function testPayment(){
 
             console.error(error);
 
+            paymentRunning = false;
+
             setStatus(
 
               "❌ Completion erreur\n\n" +
@@ -494,7 +539,14 @@ async function testPayment(){
 
         },
 
-        onCancel:function(){
+        onCancel:function(paymentId){
+
+          console.log(
+            "❌ CANCEL:",
+            paymentId
+          );
+
+          paymentRunning = false;
 
           setStatus(
             "❌ Paiement annulé"
@@ -504,14 +556,19 @@ async function testPayment(){
 
         onError:function(error){
 
-          console.error(error);
+          console.error(
+            "❌ SDK ERROR:",
+            error
+          );
+
+          paymentRunning = false;
 
           setStatus(
 
             "❌ Erreur Pi SDK\n\n" +
 
             JSON.stringify(
-              error,
+              error || {},
               null,
               2
             )
@@ -528,11 +585,13 @@ async function testPayment(){
 
     console.error(error);
 
+    paymentRunning = false;
+
     setStatus(
 
       "❌ Erreur paiement\n\n" +
 
-      error.message
+      (error.message || JSON.stringify(error))
 
     );
 
@@ -547,4 +606,4 @@ setStatus(
 </script>
 
 </body>
-</html>
+  </html>
