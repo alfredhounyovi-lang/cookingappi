@@ -4,12 +4,14 @@ export default async function handler(req, res) {
 
   try {
 
+    // 1. Method check
     if (req.method !== "POST") {
       return res.status(405).json({
         error: "Method not allowed"
       });
     }
 
+    // 2. API KEY check
     const apiKey = process.env.PI_API_KEY;
 
     console.log("🔑 API KEY EXISTS:", !!apiKey);
@@ -20,7 +22,8 @@ export default async function handler(req, res) {
       });
     }
 
-    const { paymentId } = req.body;
+    // 3. Body check
+    const { paymentId } = req.body || {};
 
     console.log("📦 BODY:", req.body);
 
@@ -32,6 +35,7 @@ export default async function handler(req, res) {
 
     console.log("🔄 APPROVE PAYMENT:", paymentId);
 
+    // 4. Call Pi API
     const response = await fetch(
       `https://api.minepi.com/v2/payments/${paymentId}/approve`,
       {
@@ -47,6 +51,7 @@ export default async function handler(req, res) {
 
     console.log("📡 RAW RESPONSE:", text);
 
+    // 5. Safe parse
     let data;
     try {
       data = JSON.parse(text);
@@ -55,9 +60,10 @@ export default async function handler(req, res) {
     }
 
     console.log("📡 STATUS:", response.status);
-    console.log("📡 PARSED:", data);
+    console.log("📡 PARSED RESPONSE:", data);
 
-    return res.status(200).json({
+    // 6. Final response (important fix)
+    return res.status(response.status).json({
       ok: response.ok,
       status: response.status,
       paymentId,
