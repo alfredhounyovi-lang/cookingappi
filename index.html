@@ -245,15 +245,97 @@ async function login(){
     const auth =
 
       await Pi.authenticate(
+async function login(){
+
+  try{
+
+    setStatus(
+      "🔄 Connexion Pi..."
+    );
+
+    const auth =
+
+      await Pi.authenticate(
 
         ["payments", "username"],
 
-        function(payment){
+        async function(payment){
 
           console.log(
-            "⚠️ INCOMPLETE PAYMENT:",
+            "⚠️ PENDING PAYMENT:",
             payment
           );
+
+          setStatus(
+
+            "⚠️ Paiement en attente détecté\n\n" +
+
+            JSON.stringify(
+              payment,
+              null,
+              2
+            )
+
+          );
+
+          try{
+
+            const paymentId =
+
+              payment.identifier;
+
+            if(!paymentId){
+
+              setStatus(
+                "❌ Payment ID introuvable"
+              );
+
+              return;
+            }
+
+            setStatus(
+              "🟡 Approval ancien paiement..."
+            );
+
+            await approvePayment(
+              paymentId
+            );
+
+            setStatus(
+              "🟡 Finalisation ancien paiement..."
+            );
+
+            await completePayment(
+              paymentId
+            );
+
+            setStatus(
+
+              "✅ Ancien paiement confirmé"
+
+            );
+
+          }catch(err){
+
+            console.error(err);
+
+            setStatus(
+
+              "❌ Impossible de compléter l'ancien paiement\n\n" +
+
+              (
+                err.message ||
+
+                JSON.stringify(
+                  err,
+                  null,
+                  2
+                )
+              )
+
+            );
+
+          }
 
         }
 
@@ -302,7 +384,7 @@ async function login(){
 
   }
 
-}
+  }
 
 async function approvePayment(paymentId){
 
