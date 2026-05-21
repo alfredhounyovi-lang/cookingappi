@@ -10,7 +10,7 @@
 
 <style>
 body{
-  font-family:Arial,sans-serif;
+  font-family:Arial;
   max-width:750px;
   margin:auto;
   padding:25px;
@@ -26,44 +26,24 @@ button{
   border-radius:10px;
   background:#5c2d91;
   color:white;
-  font-size:16px;
-  cursor:pointer;
   margin:10px;
+  cursor:pointer;
 }
 
 button:hover{ opacity:0.9; }
 
-input{
-  width:92%;
-  padding:14px;
-  border-radius:10px;
-  border:1px solid #ccc;
-  margin-top:10px;
-}
-
 #status{
   margin-top:20px;
-  padding:18px;
+  padding:15px;
   background:white;
-  border-radius:12px;
-  border:1px solid #ddd;
+  border-radius:10px;
+  min-height:120px;
   text-align:left;
   white-space:pre-line;
-  min-height:140px;
 }
 
 .counter{
-  margin-top:15px;
-  font-size:18px;
   font-weight:bold;
-}
-
-.wallet-box{
-  margin-top:30px;
-  background:white;
-  padding:20px;
-  border-radius:12px;
-  border:1px solid #ddd;
 }
 </style>
 </head>
@@ -74,16 +54,8 @@ input{
 
 <button onclick="login()">🔑 Connecter Pi</button>
 <button onclick="testPayment()">💳 Transaction Test</button>
-<button onclick="fixPendingPayments()">🛠 Confirmer Paiements</button>
 
-<div class="counter" id="counter">Transactions : 0 / 10</div>
-
-<div class="wallet-box">
-<h3>📤 Wallet Testnet</h3>
-
-<input id="walletAddress" placeholder="Colle une adresse G..." />
-<button onclick="saveWallet()">💾 Ajouter Adresse</button>
-</div>
+<div class="counter" id="counter">Transactions : 0</div>
 
 <div id="status">Initialisation...</div>
 
@@ -104,37 +76,38 @@ Pi.init({
 
 let currentUser = null;
 let txCount = 0;
-let walletList = [];
+
+/* 🔒 IMPORTANT: verrou global */
 let paymentRunning = false;
 let activePaymentId = null;
 
-/* ================= STATUS ================= */
+/* ================= UI ================= */
 function setStatus(msg){
   document.getElementById("status").innerText = msg;
 }
 
 function updateCounter(){
   document.getElementById("counter").innerText =
-    "Transactions : " + txCount + " / 10";
+    "Transactions : " + txCount;
 }
 
-/* ================= WALLET ================= */
-function saveWallet(){
-  const input = document.getElementById("walletAddress");
-  const address = input.value.trim();
+/* ================= LOGIN ================= */
+async function login(){
+  try{
+    setStatus("🔄 Connexion...");
 
-  if(!address) return alert("Adresse vide");
-  if(!address.startsWith("G")) return alert("Adresse invalide");
+    const auth = await Pi.authenticate(["payments","username"]);
+    currentUser = auth.user;
 
-  walletList.push(address);
-  input.value = "";
+    setStatus("✅ Connecté\n" + currentUser.username);
 
-  setStatus("✅ Wallet ajouté\n\n" + walletList.join("\n"));
+  }catch(e){
+    setStatus("❌ Login error\n" + e.message);
+  }
 }
 
 /* ================= BACKEND ================= */
 async function approvePayment(paymentId){
-
   const res = await fetch("/api/approve", {
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -142,14 +115,11 @@ async function approvePayment(paymentId){
   });
 
   const data = await res.json();
-
-  if(!res.ok) throw new Error(data.error || "approve error");
-
+  if(!res.ok) throw new Error(data.error);
   return data;
 }
 
 async function completePayment(paymentId){
-
   const res = await fetch("/api/complete", {
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -157,52 +127,42 @@ async function completePayment(paymentId){
   });
 
   const data = await res.json();
-
-  if(!res.ok) throw new Error(data.error || "complete error");
-
+  if(!res.ok) throw new Error(data.error);
   return data;
-}
-
-/* ================= LOGIN ================= */
-async function login(){
-  try{
-    setStatus("🔄 Connexion Pi...");
-
-    const auth = await Pi.authenticate(["payments","username"]);
-
-    currentUser = auth.user;
-
-    setStatus(
-      "✅ Connecté\n\n" + currentUser.username
-    );
-
-  }catch(e){
-    setStatus("❌ Login error\n\n" + e.message);
-  }
 }
 
 /* ================= PAYMENT ================= */
 function testPayment(){
 
-  if(paymentRunning) return alert("Déjà en cours");
-  if(!currentUser) return alert("Connecte-toi");
+  /* 🔒 1 SEUL PAYMENT À LA FOIS */
+  if(paymentRunning){
+    alert("⛔ Une transaction est déjà en cours");
+    return;
+  }
+
+  if(!currentUser){
+    alert("Connecte-toi d'abord");
+    return;
+  }
 
   paymentRunning = true;
   activePaymentId = null;
 
+  setStatus("🔄 Création paiement...");
+
   Pi.createPayment(
     {
       amount:0.01,
-      memo:"Cooking App Test #" + Date.now(),
-      metadata:{wallets:walletList}
+      memo:"Cooking App TX #" + Date.now()
     },
     {
 
+      /* ================= APPROVAL ================= */
       onReadyForServerApproval: async function(paymentId){
 
-        try{
-          activePaymentId = paymentId;
+        activePaymentId = paymentId;
 
+        try{
           setStatus("🟡 Approval...");
 
           await approvePayment(paymentId);
@@ -211,14 +171,17 @@ function testPayment(){
 
         }catch(e){
           paymentRunning = false;
-          setStatus("❌ Approval error\n\n" + e.message);
+          activePaymentId = null;
+
+          setStatus("❌ Approval failed\n" + e.message);
         }
       },
 
+      /* ================= COMPLETION ================= */
       onReadyForServerCompletion: async function(paymentId, txid){
 
         try{
-          setStatus("🟡 Completion...");
+          setStatus("🟢 Completion...");
 
           await completePayment(paymentId);
 
@@ -226,64 +189,42 @@ function testPayment(){
           updateCounter();
 
           paymentRunning = false;
+          activePaymentId = null;
 
           setStatus(
-            "✅ Paiement confirmé\n\nTXID:\n" + txid
+            "✅ Transaction OK\n\nTXID:\n" + txid
           );
 
         }catch(e){
           paymentRunning = false;
-          setStatus("❌ Completion error\n\n" + e.message);
+          activePaymentId = null;
+
+          setStatus("❌ Completion failed\n" + e.message);
         }
       },
 
+      /* ================= CANCEL ================= */
       onCancel:function(){
         paymentRunning = false;
+        activePaymentId = null;
+
         setStatus("❌ Cancelled");
       },
 
+      /* ================= ERROR ================= */
       onError:function(err){
         paymentRunning = false;
-        setStatus("❌ SDK Error\n\n" + JSON.stringify(err,null,2));
+        activePaymentId = null;
+
+        setStatus("❌ SDK Error\n" + JSON.stringify(err,null,2));
       }
 
     }
   );
 }
 
-/* ================= FIX PENDING ================= */
-async function fixPendingPayments(){
-
-  try{
-
-    setStatus("🔄 Checking pending...");
-
-    await Pi.authenticate(["payments"], async function(payment){
-
-      const paymentId = payment.identifier;
-
-      if(!paymentId){
-        setStatus("❌ Aucun pending");
-        return;
-      }
-
-      setStatus("🟡 Fixing pending...");
-
-      await approvePayment(paymentId);
-      await completePayment(paymentId);
-
-      setStatus("✅ Pending fixed");
-
-    });
-
-  }catch(e){
-    setStatus("❌ Error\n\n" + e.message);
-  }
-}
-
-window.onload = () => {
-  setStatus("✅ SDK prêt");
-};
+/* ================= INIT ================= */
+setStatus("✅ Ready");
 
 </script>
 
