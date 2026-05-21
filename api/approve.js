@@ -1,5 +1,7 @@
 export default async function handler(req, res) {
 
+  console.log("➡️ APPROVE HIT");
+
   try {
 
     if (req.method !== "POST") {
@@ -10,6 +12,8 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.PI_API_KEY;
 
+    console.log("🔑 API KEY EXISTS:", !!apiKey);
+
     if (!apiKey) {
       return res.status(500).json({
         error: "PI_API_KEY manquante sur Vercel"
@@ -17,6 +21,8 @@ export default async function handler(req, res) {
     }
 
     const { paymentId } = req.body;
+
+    console.log("📦 BODY:", req.body);
 
     if (!paymentId) {
       return res.status(400).json({
@@ -39,6 +45,8 @@ export default async function handler(req, res) {
 
     const text = await response.text();
 
+    console.log("📡 RAW RESPONSE:", text);
+
     let data;
     try {
       data = JSON.parse(text);
@@ -47,10 +55,11 @@ export default async function handler(req, res) {
     }
 
     console.log("📡 STATUS:", response.status);
-    console.log("📡 RESPONSE:", data);
+    console.log("📡 PARSED:", data);
 
-    return res.status(response.status).json({
+    return res.status(200).json({
       ok: response.ok,
+      status: response.status,
       paymentId,
       data
     });
