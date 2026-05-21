@@ -39,6 +39,8 @@ export default async function handler(req, res) {
 
     const text = await response.text();
 
+    console.log("📡 RAW RESPONSE:", text);
+
     let data;
     try {
       data = JSON.parse(text);
@@ -47,10 +49,11 @@ export default async function handler(req, res) {
     }
 
     console.log("📡 STATUS:", response.status);
-    console.log("📡 RESPONSE:", data);
+    console.log("📡 PARSED RESPONSE:", data);
 
-    return res.status(response.status).json({
+    return res.status(200).json({
       ok: response.ok,
+      status: response.status,
       paymentId,
       data
     });
@@ -64,5 +67,4 @@ export default async function handler(req, res) {
     });
 
   }
-
 }
