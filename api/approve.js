@@ -10,6 +10,14 @@ export default async function handler(req, res) {
 
     }
 
+    if (!process.env.PI_API_KEY) {
+
+      return res.status(500).json({
+        error: "PI_API_KEY manquante"
+      });
+
+    }
+
     const { paymentId } = req.body;
 
     if (!paymentId) {
@@ -20,20 +28,26 @@ export default async function handler(req, res) {
 
     }
 
-    console.log("🔄 APPROVE PAYMENT:", paymentId);
+    console.log(
+      "🔄 APPROVE PAYMENT:",
+      paymentId
+    );
 
     const response = await fetch(
 
       `https://api.minepi.com/v2/payments/${paymentId}/approve`,
 
       {
+
         method: "POST",
 
         headers: {
 
-          Authorization: `Key ${process.env.PI_API_KEY}`,
+          Authorization:
+            `Key ${process.env.PI_API_KEY}`,
 
-          "Content-Type": "application/json"
+          "Content-Type":
+            "application/json"
 
         }
 
@@ -41,19 +55,44 @@ export default async function handler(req, res) {
 
     );
 
-    const data = await response.json();
+    const text =
+      await response.text();
 
-    console.log("✅ APPROVE STATUS:", response.status);
+    let data = {};
 
-    console.log("✅ APPROVE RESPONSE:", data);
+    try {
+
+      data = JSON.parse(text);
+
+    } catch {
+
+      data = {
+        raw: text
+      };
+
+    }
+
+    console.log(
+      "✅ APPROVE STATUS:",
+      response.status
+    );
+
+    console.log(
+      "✅ APPROVE RESPONSE:",
+      data
+    );
 
     if (!response.ok) {
 
-      return res.status(response.status).json({
+      return res.status(
+        response.status
+      ).json({
 
-        error: "Pi approve failed",
+        error:
+          "Pi approve failed",
 
-        details: data
+        details:
+          data
 
       });
 
@@ -71,14 +110,19 @@ export default async function handler(req, res) {
 
   } catch (error) {
 
-    console.error("❌ APPROVE ERROR:", error);
+    console.error(
+      "❌ APPROVE ERROR:",
+      error
+    );
 
     return res.status(500).json({
 
-      error: error.message || "approve failed"
+      error:
+        error.message ||
+        "approve failed"
 
     });
 
   }
 
-}
+      }
