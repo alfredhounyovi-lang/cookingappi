@@ -10,17 +10,18 @@ export default async function handler(req, res) {
 
     }
 
-    const { paymentId } = req.body;
+    const { paymentId, txid } = req.body;
 
-    if (!paymentId) {
+    if (!paymentId || !txid) {
 
       return res.status(400).json({
-        error: "paymentId manquant"
+        error: "paymentId ou txid manquant"
       });
 
     }
 
     console.log("🔄 COMPLETE PAYMENT:", paymentId);
+    console.log("🔄 TXID:", txid);
 
     const response = await fetch(
 
@@ -35,7 +36,11 @@ export default async function handler(req, res) {
 
           "Content-Type": "application/json"
 
-        }
+        },
+
+        body: JSON.stringify({
+          txid
+        })
 
       }
 
@@ -44,7 +49,6 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     console.log("✅ COMPLETE STATUS:", response.status);
-
     console.log("✅ COMPLETE RESPONSE:", data);
 
     if (!response.ok) {
@@ -62,9 +66,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
 
       success: true,
-
       paymentId,
-
+      txid,
       data
 
     });
