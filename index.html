@@ -5,8 +5,10 @@
 
 <meta charset="UTF-8" />
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0"/>
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+/>
 
 <title>🍳 Cooking App - Pi Testnet</title>
 
@@ -103,8 +105,8 @@ Transactions : 0 / 10
 </h3>
 
 <input
-id="walletAddress"
-placeholder="Colle une adresse Testnet G..."
+  id="walletAddress"
+  placeholder="Colle une adresse Testnet G..."
 />
 
 <button onclick="saveWallet()">
@@ -119,12 +121,37 @@ Initialisation du SDK...
 
 <script>
 
+if (!window.Pi) {
+
+  document.getElementById(
+    "status"
+  ).innerText =
+
+    "❌ Pi SDK introuvable\n\n" +
+
+    "Ouvre cette app dans Pi Browser";
+
+  throw new Error(
+    "Pi SDK not found"
+  );
+
+}
+
 const Pi = window.Pi;
 
+console.log("✅ PI SDK:", Pi);
+
 Pi.init({
-  version:"2.0",
-  sandbox:true
+
+  version: "2.0",
+
+  sandbox: true
+
 });
+
+console.log(
+  "✅ Pi SDK initialisé"
+);
 
 let currentUser = null;
 let txCount = 0;
@@ -144,8 +171,11 @@ function updateCounter(){
   document.getElementById(
     "counter"
   ).innerText =
+
     "Transactions : " +
+
     txCount +
+
     " / 10";
 
 }
@@ -153,16 +183,20 @@ function updateCounter(){
 function saveWallet(){
 
   const input =
+
     document.getElementById(
       "walletAddress"
     );
 
   const address =
+
     input.value.trim();
 
   if(!address){
 
-    alert("Entre une adresse");
+    alert(
+      "Entre une adresse"
+    );
 
     return;
   }
@@ -170,8 +204,11 @@ function saveWallet(){
   if(!address.startsWith("G")){
 
     alert(
+
       "Adresse Pi invalide\n\n" +
+
       "Une adresse Pi commence par G"
+
     );
 
     return;
@@ -205,17 +242,29 @@ async function login(){
       "🔄 Connexion Pi..."
     );
 
-    const scopes = [
-      "payments",
-      "username"
-    ];
-
     const auth =
+
       await Pi.authenticate(
-        scopes
+
+        ["payments", "username"],
+
+        function(payment){
+
+          console.log(
+            "⚠️ INCOMPLETE PAYMENT:",
+            payment
+          );
+
+        }
+
       );
 
     currentUser = auth.user;
+
+    console.log(
+      "✅ USER:",
+      currentUser
+    );
 
     setStatus(
 
@@ -239,7 +288,15 @@ async function login(){
 
       "❌ Erreur connexion\n\n" +
 
-      (error.message || JSON.stringify(error))
+      (
+        error.message ||
+
+        JSON.stringify(
+          error,
+          null,
+          2
+        )
+      )
 
     );
 
@@ -249,12 +306,19 @@ async function login(){
 
 async function approvePayment(paymentId){
 
+  console.log(
+    "🟡 APPROVE REQUEST:",
+    paymentId
+  );
+
   const response =
+
     await fetch(
 
       "/api/approve",
 
       {
+
         method:"POST",
 
         headers:{
@@ -271,7 +335,13 @@ async function approvePayment(paymentId){
     );
 
   const data =
+
     await response.json();
+
+  console.log(
+    "🟡 APPROVE RESPONSE:",
+    data
+  );
 
   if(!response.ok){
 
@@ -289,17 +359,21 @@ async function approvePayment(paymentId){
 
 }
 
-async function completePayment(
-  paymentId,
-  txid
-){
+async function completePayment(paymentId){
+
+  console.log(
+    "🟢 COMPLETE REQUEST:",
+    paymentId
+  );
 
   const response =
+
     await fetch(
 
       "/api/complete",
 
       {
+
         method:"POST",
 
         headers:{
@@ -308,8 +382,7 @@ async function completePayment(
         },
 
         body:JSON.stringify({
-          paymentId,
-          txid
+          paymentId
         })
 
       }
@@ -317,7 +390,13 @@ async function completePayment(
     );
 
   const data =
+
     await response.json();
+
+  console.log(
+    "🟢 COMPLETE RESPONSE:",
+    data
+  );
 
   if(!response.ok){
 
@@ -335,7 +414,7 @@ async function completePayment(
 
 }
 
-async function testPayment(){
+function testPayment(){
 
   if(paymentRunning){
 
@@ -376,12 +455,16 @@ async function testPayment(){
 
       {
 
-        amount:0.01,
+        amount: 0.01,
 
         memo:
+
           "Cooking App Test #" +
+
           (txCount + 1) +
+
           "-" +
+
           Date.now(),
 
         metadata:{
@@ -403,37 +486,16 @@ async function testPayment(){
 
           try{
 
-            console.log(
-              "🟡 APPROVAL:",
+            setStatus(
+              "🟡 Approval..."
+            );
+
+            await approvePayment(
               paymentId
             );
 
             setStatus(
-
-              "🟡 Paiement créé\n\n" +
-
-              "Approval en cours..."
-
-            );
-
-            const result =
-              await approvePayment(
-                paymentId
-              );
-
-            console.log(
-              "✅ APPROVED:",
-              result
-            );
-
-            setStatus(
-
-              "✅ Paiement approuvé\n\n" +
-
-              "ID : " +
-
-              paymentId
-
+              "✅ Paiement approuvé"
             );
 
           }catch(error){
@@ -455,36 +517,16 @@ async function testPayment(){
         },
 
         onReadyForServerCompletion:
-        async function(
-          paymentId,
-          txid
-        ){
+        async function(paymentId){
 
           try{
-
-            console.log(
-              "🟢 COMPLETION:",
-              paymentId
-            );
-
-            console.log(
-              "🟢 TXID:",
-              txid
-            );
 
             setStatus(
               "🟡 Finalisation..."
             );
 
-            const result =
-              await completePayment(
-                paymentId,
-                txid
-              );
-
-            console.log(
-              "✅ COMPLETED:",
-              result
+            await completePayment(
+              paymentId
             );
 
             txCount++;
@@ -497,29 +539,13 @@ async function testPayment(){
 
               "✅ Transaction réussie\n\n" +
 
-              "TXID :\n" +
-
-              txid +
-
-              "\n\nTransactions : " +
+              "Transactions : " +
 
               txCount +
 
               "/10"
 
             );
-
-            if(txCount === 10){
-
-              alert(
-
-                "🎉 Bravo !\n\n" +
-
-                "10 transactions Testnet terminées."
-
-              );
-
-            }
 
           }catch(error){
 
@@ -591,7 +617,15 @@ async function testPayment(){
 
       "❌ Erreur paiement\n\n" +
 
-      (error.message || JSON.stringify(error))
+      (
+        error.message ||
+
+        JSON.stringify(
+          error,
+          null,
+          2
+        )
+      )
 
     );
 
