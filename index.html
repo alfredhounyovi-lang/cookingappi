@@ -1,277 +1,1054 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🍳 Cooking App - Pi Testnet</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<title>CV Pro + Pi Network</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 750px;
-      margin: auto;
-      padding: 25px;
-      text-align: center;
-      background: #fafafa;
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+
+/* ===========================
+   RESET
+=========================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
+}
+
+/* ===========================
+   BODY
+=========================== */
+
+body{
+    background:#f4f6f8;
+    min-height:100vh;
+}
+
+/* ===========================
+   TOP BAR
+=========================== */
+
+.topbar{
+    background:#5c2d91;
+    color:white;
+    padding:15px;
+    text-align:center;
+}
+
+.topbar h1{
+    margin-bottom:10px;
+}
+
+.top-buttons{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+.top-buttons button{
+    background:white;
+    color:#5c2d91;
+    border:none;
+    border-radius:8px;
+    padding:12px 18px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.top-buttons button:hover{
+    opacity:.9;
+}
+
+/* ===========================
+   STATUS
+=========================== */
+
+.status-box{
+    max-width:1200px;
+    margin:15px auto;
+    background:white;
+    border:1px solid #ddd;
+    border-radius:10px;
+    padding:15px;
+}
+
+#status{
+    white-space:pre-line;
+}
+
+.counter{
+    margin-top:10px;
+    font-weight:bold;
+}
+
+/* ===========================
+   LAYOUT
+=========================== */
+
+.container{
+    display:flex;
+    width:100%;
+}
+
+/* ===========================
+   FORMULAIRE
+=========================== */
+
+.form-section{
+    width:40%;
+    background:white;
+    padding:20px;
+    overflow-y:auto;
+    border-right:2px solid #ddd;
+}
+
+.form-section h2{
+    margin-bottom:20px;
+}
+
+.form-group{
+    margin-bottom:12px;
+}
+
+.form-group label{
+    display:block;
+    margin-bottom:5px;
+    font-size:14px;
+}
+
+.form-group input,
+.form-group textarea{
+    width:100%;
+    padding:10px;
+    border:1px solid #ccc;
+    border-radius:6px;
+}
+
+textarea{
+    resize:vertical;
+    min-height:80px;
+}
+
+.action-buttons{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:15px;
+}
+
+.action-buttons button{
+    border:none;
+    background:#007bff;
+    color:white;
+    padding:12px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.action-buttons button:hover{
+    background:#0056b3;
+}
+
+/* ===========================
+   PREVIEW
+=========================== */
+
+.cv-section{
+    width:60%;
+    padding:20px;
+}
+
+.cv{
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,.1);
+}
+
+.header{
+    text-align:center;
+    border-bottom:2px solid #ddd;
+    padding-bottom:10px;
+}
+
+.header h1{
+    color:#007bff;
+}
+
+.section{
+    margin-top:15px;
+}
+
+.section h3{
+    border-bottom:1px solid #ddd;
+    margin-bottom:5px;
+    color:#333;
+}
+
+.section p{
+    white-space:pre-line;
+}
+
+/* ===========================
+   WALLET BOX
+=========================== */
+
+.wallet-box{
+    margin-top:20px;
+    background:#fafafa;
+    border:1px solid #ddd;
+    border-radius:10px;
+    padding:15px;
+}
+
+.wallet-box input{
+    margin-top:10px;
+}
+
+/* ===========================
+   DARK MODE
+=========================== */
+
+body.dark{
+    background:#111;
+}
+
+body.dark .form-section,
+body.dark .cv,
+body.dark .status-box{
+    background:#1f1f1f;
+    color:white;
+}
+
+body.dark input,
+body.dark textarea{
+    background:#2c2c2c;
+    color:white;
+    border-color:#444;
+}
+
+/* ===========================
+   MOBILE
+=========================== */
+
+@media(max-width:900px){
+
+    .container{
+        flex-direction:column;
     }
 
-    h1 { 
-      color: #5c2d91; 
+    .form-section,
+    .cv-section{
+        width:100%;
     }
 
-    button {
-      padding: 14px 20px;
-      border: none;
-      border-radius: 10px;
-      background: #5c2d91;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-      margin: 10px;
-      transition: opacity 0.2s;
+}
+
+/* ===========================
+   PRINT
+=========================== */
+
+@media print{
+
+    .topbar,
+    .status-box,
+    .form-section{
+        display:none;
     }
 
-    button:hover { 
-      opacity: 0.9; 
+    .cv-section{
+        width:100%;
     }
 
-    input {
-      width: 92%;
-      padding: 14px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      margin-top: 10px;
-    }
+}
 
-    #status {
-      margin-top: 20px;
-      padding: 18px;
-      background: white;
-      border-radius: 12px;
-      border: 1px solid #ddd;
-      text-align: left;
-      white-space: pre-line;
-      min-height: 140px;
-    }
-
-    .counter {
-      margin-top: 15px;
-      font-size: 18px;
-      font-weight: bold;
-    }
-
-    .wallet-box {
-      margin-top: 30px;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      border: 1px solid #ddd;
-    }
-  </style>
+</style>
 </head>
-
 <body>
 
-  <h1>🍳 Cooking App</h1>
+<!-- ===========================
+     TOP BAR
+=========================== -->
 
-  <button onclick="login()">🔑 Connecter Pi</button>
-  <button onclick="testPayment()">💳 Transaction Test</button>
-  <button onclick="fixPendingPayments()">🛠 Confirmer Paiements</button>
+<div class="topbar">
 
-  <div class="counter" id="counter">Transactions : 0 / 10</div>
+    <h1>🍳 CV Pro + Pi Network</h1>
 
-  <div class="wallet-box">
-    <h3>📤 Wallet Testnet</h3>
-    <input id="walletAddress" placeholder="Colle une adresse G..." />
-    <button onclick="saveWallet()">💾 Ajouter Adresse</button>
-  </div>
+    <div class="top-buttons">
 
-  <div id="status">Initialisation...</div>
+        <button onclick="login()">
+            🔑 Connecter Pi
+        </button>
 
+        <button onclick="fixPendingPayments()">
+            🛠 Vérifier Paiements
+        </button>
+
+        <button onclick="toggleDark()">
+            🌙 Mode sombre
+        </button>
+
+    </div>
+
+</div>
+
+<!-- ===========================
+     STATUS
+=========================== -->
+
+<div class="status-box">
+
+    <div id="status">
+Chargement...
+    </div>
+
+    <div class="counter" id="counter">
+Transactions : 0 / 10
+    </div>
+
+</div>
+
+<!-- ===========================
+     MAIN
+=========================== -->
+
+<div class="container">
+
+    <!-- FORM -->
+
+    <div class="form-section">
+
+        <h2>Créer ton CV</h2>
+
+        <div class="form-group">
+            <label>Nom complet</label>
+            <input type="text" id="name">
+        </div>
+
+        <div class="form-group">
+            <label>Email</label>
+            <input type="text" id="email">
+        </div>
+
+        <div class="form-group">
+            <label>Téléphone</label>
+            <input type="text" id="phone">
+        </div>
+
+        <div class="form-group">
+            <label>Profil</label>
+            <textarea id="profile"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Compétences</label>
+            <textarea id="skills"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Expériences</label>
+            <textarea id="experience"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Formation</label>
+            <textarea id="education"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Langues</label>
+            <textarea id="languages"></textarea>
+        </div>
+
+        <div class="action-buttons">
+
+            <button onclick="generateCV()">
+                Générer CV
+            </button>
+
+            <button onclick="payAndDownloadCV()">
+                📥 Télécharger PDF (0.01 π)
+            </button>
+
+            <button onclick="clearData()">
+                🗑 Effacer
+            </button>
+
+        </div>
+
+        <div class="wallet-box">
+
+            <h3>Wallet Testnet</h3>
+
+            <input
+                id="walletAddress"
+                placeholder="Adresse G..."
+            >
+
+            <div class="action-buttons">
+
+                <button onclick="saveWallet()">
+                    💾 Ajouter Adresse
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- CV -->
+
+    <div class="cv-section">
+
+        <div class="cv" id="cv">
+
+            <div class="header">
+
+                <h1 id="cv-name">
+                    Nom Prénom
+                </h1>
+
+                <p id="cv-contact">
+                    email | téléphone
+                </p>
+
+            </div>
+
+            <div class="section">
+                <h3>Profil</h3>
+                <p id="cv-profile"></p>
+            </div>
+
+            <div class="section">
+                <h3>Compétences</h3>
+                <p id="cv-skills"></p>
+            </div>
+
+            <div class="section">
+                <h3>Expériences</h3>
+                <p id="cv-experience"></p>
+            </div>
+
+            <div class="section">
+                <h3>Formation</h3>
+                <p id="cv-education"></p>
+            </div>
+
+            <div class="section">
+                <h3>Langues</h3>
+                <p id="cv-languages"></p>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- VERSION 2/2 = JAVASCRIPT -->
   <script>
-    // 1. Sécurité : Vérifier si l'application est bien ouverte dans le Pi Browser
-    if (!window.Pi) {
-      document.getElementById("status").innerText = "❌ Erreur : Ouvre cette application dans le Pi Browser.";
-      throw new Error("Pi SDK missing");
+
+/* ===========================
+   PI SDK
+=========================== */
+
+if (!window.Pi) {
+  document.getElementById("status").innerText =
+    "❌ Ouvre cette application dans Pi Browser.";
+} else {
+
+  const Pi = window.Pi;
+
+  Pi.init({
+    version: "2.0",
+    sandbox: true
+  });
+
+  window.PiApp = Pi;
+}
+
+/* ===========================
+   GLOBALS
+=========================== */
+
+let currentUser = null;
+let txCount = 0;
+let walletList = [];
+let paymentRunning = false;
+let downloadUnlocked = false;
+
+/* ===========================
+   STATUS
+=========================== */
+
+function setStatus(msg){
+  document.getElementById("status").innerText = msg;
+}
+
+function updateCounter(){
+  document.getElementById("counter").innerText =
+    "Transactions : " + txCount + " / 10";
+}
+
+/* ===========================
+   CV GENERATOR
+=========================== */
+
+function generateCV(){
+
+  document.getElementById("cv-name").innerText =
+    document.getElementById("name").value || "Nom Prénom";
+
+  document.getElementById("cv-contact").innerText =
+    (document.getElementById("email").value || "") +
+    " | " +
+    (document.getElementById("phone").value || "");
+
+  document.getElementById("cv-profile").innerText =
+    document.getElementById("profile").value;
+
+  document.getElementById("cv-skills").innerText =
+    formatList(document.getElementById("skills").value);
+
+  document.getElementById("cv-experience").innerText =
+    formatList(document.getElementById("experience").value);
+
+  document.getElementById("cv-education").innerText =
+    formatList(document.getElementById("education").value);
+
+  document.getElementById("cv-languages").innerText =
+    formatList(document.getElementById("languages").value);
+}
+
+/* ===========================
+   FORMAT LIST
+=========================== */
+
+function formatList(text){
+
+  if(!text.trim()) return "";
+
+  return text
+    .split("\n")
+    .filter(v => v.trim())
+    .map(v => "• " + v)
+    .join("\n");
+
+}
+
+/* ===========================
+   AUTOSAVE
+=========================== */
+
+const fields = document.querySelectorAll("input, textarea");
+
+fields.forEach(field => {
+
+  field.addEventListener("input", () => {
+
+    localStorage.setItem(
+      field.id,
+      field.value
+    );
+
+    generateCV();
+
+  });
+
+});
+
+/* ===========================
+   LOAD DATA
+=========================== */
+
+function loadSavedData(){
+
+  fields.forEach(field => {
+
+    field.value =
+      localStorage.getItem(field.id) || "";
+
+  });
+
+  generateCV();
+
+}
+
+/* ===========================
+   CLEAR DATA
+=========================== */
+
+function clearData(){
+
+  if(!confirm("Effacer toutes les données ?"))
+    return;
+
+  fields.forEach(field => {
+
+    field.value = "";
+
+    localStorage.removeItem(field.id);
+
+  });
+
+  generateCV();
+
+}
+
+/* ===========================
+   DARK MODE
+=========================== */
+
+function toggleDark(){
+
+  document.body.classList.toggle("dark");
+
+}
+
+/* ===========================
+   WALLET MANAGEMENT
+=========================== */
+
+function saveWallet(){
+
+  const input =
+    document.getElementById("walletAddress");
+
+  const address =
+    input.value.trim();
+
+  if(!address){
+
+    alert("Adresse vide");
+    return;
+
+  }
+
+  if(
+    !address.startsWith("G") ||
+    address.length !== 56
+  ){
+    alert("Adresse invalide");
+    return;
+  }
+
+  walletList.push(address);
+
+  input.value = "";
+
+  setStatus(
+    "✅ Wallet ajouté\n\n" +
+    walletList.join("\n")
+  );
+
+}
+
+/* ===========================
+   APPROVE
+=========================== */
+
+async function approvePayment(paymentId){
+
+  const res = await fetch(
+    "/api/approve",
+    {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        paymentId
+      })
+    }
+  );
+
+  const data = await res.json();
+
+  if(!res.ok){
+
+    throw new Error(
+      data.error ||
+      "approve failed"
+    );
+
+  }
+
+  return data;
+
+}
+
+/* ===========================
+   COMPLETE
+=========================== */
+
+async function completePayment(
+  paymentId,
+  txid
+){
+
+  const res = await fetch(
+    "/api/complete",
+    {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        paymentId,
+        txid
+      })
+    }
+  );
+
+  const data = await res.json();
+
+  if(!res.ok){
+
+    throw new Error(
+      data.error ||
+      "complete failed"
+    );
+
+  }
+
+  return data;
+
+}
+
+/* ===========================
+   LOGIN PI
+=========================== */
+
+async function login(){
+
+  try{
+
+    if(!window.PiApp)
+      throw new Error(
+        "Pi SDK indisponible"
+      );
+
+    setStatus(
+      "🔄 Connexion..."
+    );
+
+    const auth =
+      await window.PiApp.authenticate(
+        ["payments","username"],
+        onIncompletePaymentFound
+      );
+
+    currentUser = auth.user;
+
+    setStatus(
+      "✅ Connecté\n\n" +
+      currentUser.username
+    );
+
+  }
+  catch(e){
+
+    setStatus(
+      "❌ " + e.message
+    );
+
+  }
+
+}
+
+/* ===========================
+   INCOMPLETE PAYMENT
+=========================== */
+
+async function onIncompletePaymentFound(payment){
+
+  try{
+
+    const paymentId =
+      payment.identifier;
+
+    const txid =
+      payment.transaction
+      ? payment.transaction.txid
+      : null;
+
+    if(
+      payment.status
+      &&
+      payment.status.developer_approved === false
+    ){
+      await approvePayment(paymentId);
     }
 
-    const Pi = window.Pi;
-
-    // 2. Initialisation du SDK Pi
-    Pi.init({
-      version: "2.0",
-      sandbox: true // /!\ Mettre à false lors du passage en Production / Mainnet
-    });
-
-    // Variables globales de l'application
-    let currentUser = null;
-    let txCount = 0;
-    let walletList = [];
-    let paymentRunning = false;
-
-    /* ================= MISE À JOUR DE L'INTERFACE ================= */
-    function setStatus(msg) {
-      document.getElementById("status").innerText = msg;
-    }
-
-    function updateCounter() {
-      document.getElementById("counter").innerText = "Transactions : " + txCount + " / 10";
-    }
-
-    /* ================= GESTION DES WALLETS ================= */
-    function saveWallet() {
-      const input = document.getElementById("walletAddress");
-      const address = input.value.trim();
-
-      if (!address) return alert("L'adresse ne peut pas être vide.");
-      if (!address.startsWith("G") || address.length !== 56) {
-        return alert("Adresse invalide. Une adresse Pi doit commencer par 'G' et faire exactement 56 caractères.");
-      }
-
-      walletList.push(address);
-      input.value = "";
-
-      setStatus("✅ Wallet ajouté avec succès !\n\nListe actuelle :\n" + walletList.join("\n"));
-    }
-
-    /* ================= APPELS API VERS TON BACKEND ================= */
-    // Étape 1 : Demander au backend d'approuver le paiement auprès de Pi Network
-    async function approvePayment(paymentId) {
-      const res = await fetch("/api/approve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentId })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erreur lors de l'approbation du serveur.");
-      return data;
-    }
-
-    // Étape 2 : Demander au backend de marquer le paiement comme complété
-    async function completePayment(paymentId, txid) {
-      const res = await fetch("/api/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentId, txid })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erreur lors de la complétion du serveur.");
-      return data;
-    }
-
-    /* ================= AUTHENTIFICATION & PENDINGS ================= */
-    async function login() {
-      try {
-        setStatus("🔄 Connexion à Pi Network...");
-
-        // Authentification + Liaison avec la fonction de récupération des paiements interrompus
-        const auth = await Pi.authenticate(["payments", "username"], onIncompletePaymentFound);
-
-        currentUser = auth.user;
-        setStatus("✅ Connecté avec succès\n\nUtilisateur : " + currentUser.username);
-
-      } catch (e) {
-        setStatus("❌ Erreur de connexion :\n\n" + e.message);
-      }
-    }
-
-    // Fonction cruciale imposée par Pi : s'exécute si une transaction précédente a été coupée en plein milieu
-    async function onIncompletePaymentFound(payment) {
-      try {
-        setStatus("⚠️ Transaction incomplète détectée !\nTentative de résolution...");
-        const paymentId = payment.identifier;
-        const txid = payment.transaction ? payment.transaction.txid : null;
-
-        // Si le paiement n'avait pas encore été approuvé par ton serveur
-        if (payment.status.developer_approved === false) {
-          await approvePayment(paymentId);
-        }
-        
-        // Si la transaction a été faite sur la blockchain mais non validée côté serveur
-        if (payment.status.developer_completed === false && txid) {
-          await completePayment(paymentId, txid);
-        }
-
-        setStatus("✅ Paiement incomplet résolu et synchronisé !");
-      } catch (e) {
-        setStatus("❌ Impossible de résoudre le paiement suspendu :\n\n" + e.message);
-      }
-    }
-
-    /* ================= FLUX DE PAIEMENT PI ================= */
-    function testPayment() {
-      if (paymentRunning) return alert("Une transaction est déjà en cours de traitement.");
-      if (!currentUser) return alert("Veuillez d'abord vous connecter avec le bouton 'Connecter Pi'.");
-
-      paymentRunning = true;
-
-      Pi.createPayment(
-        {
-          amount: 0.01,
-          memo: "Cooking App Test #" + Date.now(),
-          metadata: { wallets: walletList }
-        },
-        {
-          // Appelé quand l'utilisateur clique, mais avant qu'il ne tape son mot de passe de wallet
-          onReadyForServerApproval: async function(paymentId) {
-            try {
-              setStatus("🟡 Étape 1 : Approbation de la transaction par le serveur...");
-              await approvePayment(paymentId);
-              setStatus("✅ Étape 1 réussie. En attente de la signature de l'utilisateur dans son portefeuille...");
-            } catch (e) {
-              paymentRunning = false;
-              setStatus("❌ Échec de l'approbation :\n\n" + e.message);
-            }
-          },
-
-          // Appelé dès que la blockchain Pi a validé le transfert des 0.01 Pi
-          onReadyForServerCompletion: async function(paymentId, txid) {
-            try {
-              setStatus("🟡 Étape 2 : Enregistrement et finalisation de la transaction...");
-              await completePayment(paymentId, txid);
-
-              txCount++;
-              updateCounter();
-              paymentRunning = false;
-
-              setStatus("✅ Transaction réussie et sécurisée !\n\nTXID blockchain :\n" + txid);
-            } catch (e) {
-              paymentRunning = false;
-              setStatus("❌ Échec de la complétion :\n\n" + e.message);
-            }
-          },
-
-          onCancel: function() {
-            paymentRunning = false;
-            setStatus("❌ Transaction annulée par l'utilisateur.");
-          },
-
-          onError: function(err) {
-            paymentRunning = false;
-            setStatus("❌ Erreur critique du SDK Pi :\n\n" + JSON.stringify(err, null, 2));
-          }
-        }
+    if(
+      payment.status
+      &&
+      payment.status.developer_completed === false
+      &&
+      txid
+    ){
+      await completePayment(
+        paymentId,
+        txid
       );
     }
 
-    /* ================= BOUTON DE SECOURS MANUEL ================= */
-    async function fixPendingPayments() {
-      setStatus("🔄 Relance de la vérification des paiements...");
-      // Relancer l'authentification déclenche automatiquement 'onIncompletePaymentFound' s'il y a un blocage
-      await login(); 
+    setStatus(
+      "✅ Paiement incomplet résolu"
+    );
+
+  }
+  catch(e){
+
+    setStatus(
+      "❌ " + e.message
+    );
+
+  }
+
+}
+
+/* ===========================
+   FIX PAYMENTS
+=========================== */
+
+async function fixPendingPayments(){
+
+  await login();
+
+}
+
+/* ===========================
+   DOWNLOAD PDF
+=========================== */
+
+function downloadCV(){
+
+  generateCV();
+
+  const element =
+    document.getElementById("cv");
+
+  html2pdf()
+    .set({
+      margin:0.5,
+      filename:"Mon_CV.pdf",
+      image:{
+        type:"jpeg",
+        quality:1
+      },
+      html2canvas:{
+        scale:2
+      },
+      jsPDF:{
+        unit:"in",
+        format:"a4",
+        orientation:"portrait"
+      }
+    })
+    .from(element)
+    .save();
+
+}
+
+/* ===========================
+   PAYMENT + DOWNLOAD
+=========================== */
+
+function payAndDownloadCV(){
+
+  if(downloadUnlocked){
+
+    downloadCV();
+    return;
+
+  }
+
+  if(!currentUser){
+
+    alert(
+      "Connecte-toi à Pi d'abord"
+    );
+
+    return;
+
+  }
+
+  if(paymentRunning){
+
+    alert(
+      "Paiement déjà en cours"
+    );
+
+    return;
+
+  }
+
+  paymentRunning = true;
+
+  window.PiApp.createPayment(
+    {
+      amount:0.01,
+      memo:"Téléchargement CV",
+      metadata:{
+        type:"cv"
+      }
+    },
+    {
+
+      onReadyForServerApproval:
+      async function(paymentId){
+
+        try{
+
+          setStatus(
+            "🟡 Approbation..."
+          );
+
+          await approvePayment(
+            paymentId
+          );
+
+          setStatus(
+            "✅ Approuvé"
+          );
+
+        }
+        catch(e){
+
+          paymentRunning = false;
+
+          setStatus(
+            "❌ " + e.message
+          );
+
+        }
+
+      },
+
+      onReadyForServerCompletion:
+      async function(
+        paymentId,
+        txid
+      ){
+
+        try{
+
+          setStatus(
+            "🟡 Finalisation..."
+          );
+
+          await completePayment(
+            paymentId,
+            txid
+          );
+
+          txCount++;
+
+          updateCounter();
+
+          downloadUnlocked = true;
+
+          paymentRunning = false;
+
+          setStatus(
+            "✅ Paiement réussi"
+          );
+
+          downloadCV();
+
+        }
+        catch(e){
+
+          paymentRunning = false;
+
+          setStatus(
+            "❌ " + e.message
+          );
+
+        }
+
+      },
+
+      onCancel:function(){
+
+        paymentRunning = false;
+
+        setStatus(
+          "❌ Paiement annulé"
+        );
+
+      },
+
+      onError:function(err){
+
+        paymentRunning = false;
+
+        setStatus(
+          "❌ " +
+          JSON.stringify(err)
+        );
+
+      }
+
+    }
+  );
+
+}
+
+/* ===========================
+   SHORTCUTS
+=========================== */
+
+document.addEventListener(
+  "keydown",
+  function(e){
+
+    if(
+      e.ctrlKey &&
+      e.key === "s"
+    ){
+
+      e.preventDefault();
+
+      generateCV();
+
+      alert(
+        "CV sauvegardé"
+      );
+
     }
 
-    // Affichage initial une fois la page totalement chargée
-    window.onload = () => {
-      setStatus("✅ SDK Pi chargé et prêt.");
-    };
+  }
+);
+
+/* ===========================
+   WINDOW LOAD
+=========================== */
+
+window.onload = () => {
+
+  loadSavedData();
+
+  updateCounter();
+
+  setStatus(
+    "✅ Application prête"
+  );
+
+};
+
   </script>
 
 </body>
-  </html>
-  
+</html>
