@@ -13,7 +13,7 @@
 <style>
 
 /* ===========================
-   RESET
+    RESET
 =========================== */
 
 *{
@@ -24,7 +24,7 @@
 }
 
 /* ===========================
-   BODY
+    BODY
 =========================== */
 
 body{
@@ -33,7 +33,7 @@ body{
 }
 
 /* ===========================
-   TOP BAR
+    TOP BAR
 =========================== */
 
 .topbar{
@@ -69,7 +69,7 @@ body{
 }
 
 /* ===========================
-   STATUS
+    STATUS
 =========================== */
 
 .status-box{
@@ -91,7 +91,7 @@ body{
 }
 
 /* ===========================
-   LAYOUT
+    LAYOUT
 =========================== */
 
 .container{
@@ -100,7 +100,7 @@ body{
 }
 
 /* ===========================
-   FORMULAIRE
+    FORMULAIRE
 =========================== */
 
 .form-section{
@@ -159,7 +159,7 @@ textarea{
 }
 
 /* ===========================
-   PREVIEW
+    PREVIEW
 =========================== */
 
 .cv-section{
@@ -199,7 +199,7 @@ textarea{
 }
 
 /* ===========================
-   WALLET BOX
+    WALLET BOX
 =========================== */
 
 .wallet-box{
@@ -215,7 +215,7 @@ textarea{
 }
 
 /* ===========================
-   DARK MODE
+    DARK MODE
 =========================== */
 
 body.dark{
@@ -237,7 +237,7 @@ body.dark textarea{
 }
 
 /* ===========================
-   MOBILE
+    MOBILE
 =========================== */
 
 @media(max-width:900px){
@@ -254,7 +254,7 @@ body.dark textarea{
 }
 
 /* ===========================
-   PRINT
+    PRINT
 =========================== */
 
 @media print{
@@ -275,10 +275,6 @@ body.dark textarea{
 </head>
 <body>
 
-<!-- ===========================
-     TOP BAR
-=========================== -->
-
 <div class="topbar">
 
     <h1>🍳 CV Pro + Pi Network</h1>
@@ -289,10 +285,6 @@ body.dark textarea{
             🔑 Connecter Pi
         </button>
 
-        <button onclick="fixPendingPayments()">
-            🛠 Vérifier Paiements
-        </button>
-
         <button onclick="toggleDark()">
             🌙 Mode sombre
         </button>
@@ -300,10 +292,6 @@ body.dark textarea{
     </div>
 
 </div>
-
-<!-- ===========================
-     STATUS
-=========================== -->
 
 <div class="status-box">
 
@@ -317,13 +305,7 @@ Transactions : 0 / 10
 
 </div>
 
-<!-- ===========================
-     MAIN
-=========================== -->
-
 <div class="container">
-
-    <!-- FORM -->
 
     <div class="form-section">
 
@@ -375,8 +357,8 @@ Transactions : 0 / 10
                 Générer CV
             </button>
 
-            <button onclick="payAndDownloadCV()">
-                📥 Télécharger PDF (0.01 π)
+            <button onclick="payAndDisplayCV()">
+                👁️ Afficher mon CV (0.001 π)
             </button>
 
             <button onclick="clearData()">
@@ -405,8 +387,6 @@ Transactions : 0 / 10
         </div>
 
     </div>
-
-    <!-- CV -->
 
     <div class="cv-section">
 
@@ -455,8 +435,7 @@ Transactions : 0 / 10
 
 </div>
 
-<!-- VERSION 2/2 = JAVASCRIPT -->
-  <script>
+<script>
 
 /* ===========================
    PI SDK
@@ -485,7 +464,7 @@ let currentUser = null;
 let txCount = 0;
 let walletList = [];
 let paymentRunning = false;
-let downloadUnlocked = false;
+let cvUnlocked = false;
 
 /* ===========================
    STATUS
@@ -819,17 +798,7 @@ async function onIncompletePaymentFound(payment){
 }
 
 /* ===========================
-   FIX PAYMENTS
-=========================== */
-
-async function fixPendingPayments(){
-
-  await login();
-
-}
-
-/* ===========================
-   DOWNLOAD PDF
+   DOWNLOAD PDF (CONSERVÉ MAIS NON UTILISÉ APRÈS LE PAIEMENT)
 =========================== */
 
 function downloadCV(){
@@ -862,16 +831,38 @@ function downloadCV(){
 }
 
 /* ===========================
-   PAYMENT + DOWNLOAD
+   AFFICHAGE PLEIN ÉCRAN DU CV
 =========================== */
 
-function payAndDownloadCV(){
+function displayFullCV(){
+  // Générer le CV à jour
+  generateCV();
+  
+  // Masquer complètement la section formulaire
+  const formSec = document.querySelector(".form-section");
+  if(formSec) formSec.style.display = "none";
+  
+  // Afficher la section CV sur toute la largeur
+  const cvSec = document.querySelector(".cv-section");
+  if(cvSec) cvSec.style.width = "100%";
+  
+  // Mettre à jour le message de statut
+  setStatus(
+    "✅ Paiement confirmé\n" +
+    "📄 Votre CV est maintenant affiché.\n" +
+    "📱 Faites une capture d'écran pour le conserver."
+  );
+}
 
-  if(downloadUnlocked){
+/* ===========================
+   PAYMENT + DISPLAY
+=========================== */
 
-    downloadCV();
+function payAndDisplayCV(){
+
+  if(cvUnlocked){
+    displayFullCV();
     return;
-
   }
 
   if(!currentUser){
@@ -898,8 +889,8 @@ function payAndDownloadCV(){
 
   window.PiApp.createPayment(
     {
-      amount:0.01,
-      memo:"Téléchargement CV",
+      amount:0.001,
+      memo:"Affichage CV Pro",
       metadata:{
         type:"cv"
       }
@@ -957,15 +948,12 @@ function payAndDownloadCV(){
 
           updateCounter();
 
-          downloadUnlocked = true;
+          cvUnlocked = true;
 
           paymentRunning = false;
 
-          setStatus(
-            "✅ Paiement réussi"
-          );
-
-          downloadCV();
+          // Déclenchement de l'affichage plein écran au lieu du téléchargement
+          displayFullCV();
 
         }
         catch(e){
